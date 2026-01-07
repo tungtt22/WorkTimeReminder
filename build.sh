@@ -33,6 +33,12 @@ swiftc -O \
 echo "📄 Copying Info.plist..."
 cp WorkTimeReminder/Info.plist "$CONTENTS_DIR/"
 
+# Copy app icon
+if [ -f "WorkTimeReminder/AppIcon.icns" ]; then
+    echo "🎨 Copying app icon..."
+    cp WorkTimeReminder/AppIcon.icns "$RESOURCES_DIR/"
+fi
+
 # Create PkgInfo
 echo "APPL????" > "$CONTENTS_DIR/PkgInfo"
 
