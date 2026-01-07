@@ -318,10 +318,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let content = UNMutableNotificationContent()
         content.title = l10n.notificationTitle
         content.body = l10n.notificationBody(minutes: reminderManager.intervalMinutes)
-        content.sound = .default
+        
+        // Set notification sound based on user preference
+        if reminderManager.enableSound {
+            content.sound = reminderManager.notificationSound.unSound
+        }
+        
+        // Add category for interactive notifications
+        content.categoryIdentifier = "BREAK_REMINDER"
         
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
+        
+        // Also play system sound for better attention
+        if reminderManager.enableSound {
+            reminderManager.playSound(reminderManager.notificationSound)
+        }
     }
     
     func activateScreenSaver() {

@@ -130,6 +130,27 @@ struct L10n {
         lang == .vietnamese ? "Nhà phát triển" : "Developer"
     }
     
+    // MARK: - Sound Settings
+    var sound: String {
+        lang == .vietnamese ? "Âm thanh" : "Sound"
+    }
+    
+    var enableSound: String {
+        lang == .vietnamese ? "Bật âm thanh" : "Enable sound"
+    }
+    
+    var soundWhenNotify: String {
+        lang == .vietnamese ? "Phát âm thanh khi thông báo" : "Play sound on notification"
+    }
+    
+    var selectSound: String {
+        lang == .vietnamese ? "Chọn âm thanh" : "Select sound"
+    }
+    
+    var previewSound: String {
+        lang == .vietnamese ? "Nghe thử" : "Preview"
+    }
+    
     // MARK: - Notifications
     var notificationTitle: String {
         lang == .vietnamese ? "⏰ Nghỉ ngơi thôi!" : "⏰ Time for a break!"
