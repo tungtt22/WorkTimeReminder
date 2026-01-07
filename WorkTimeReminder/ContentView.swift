@@ -312,6 +312,9 @@ struct SettingsScreenView: View {
                     // Language Section
                     languageSection
                     
+                    // Sound Section
+                    soundSection
+                    
                     // Screen Saver Section
                     screenSaverSection
                     
@@ -441,6 +444,85 @@ struct SettingsScreenView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(NSColor.windowBackgroundColor))
             )
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+        )
+    }
+    
+    // MARK: - Sound Section
+    var soundSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "speaker.wave.3.fill")
+                    .foregroundColor(.green)
+                Text(l10n.sound)
+                    .font(.system(size: 13, weight: .medium))
+                Spacer()
+            }
+            
+            // Enable sound toggle
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(l10n.enableSound)
+                        .font(.system(size: 12))
+                    Text(l10n.soundWhenNotify)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Toggle("", isOn: $reminderManager.enableSound)
+                    .toggleStyle(SwitchToggleStyle(tint: .green))
+                    .labelsHidden()
+            }
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(NSColor.windowBackgroundColor))
+            )
+            
+            // Sound picker
+            if reminderManager.enableSound {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(l10n.selectSound)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    
+                    // Sound grid
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
+                        ForEach(NotificationSound.allCases, id: \.self) { sound in
+                            Button(action: {
+                                withAnimation(.spring(response: 0.2)) {
+                                    reminderManager.notificationSound = sound
+                                    reminderManager.playSound(sound)
+                                }
+                            }) {
+                                Text(sound.displayName)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(reminderManager.notificationSound == sound ?
+                                                  Color.green : Color(NSColor.controlBackgroundColor))
+                                    )
+                                    .foregroundColor(reminderManager.notificationSound == sound ? .white : .primary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(NSColor.windowBackgroundColor))
+                )
+            }
         }
         .padding(12)
         .background(
