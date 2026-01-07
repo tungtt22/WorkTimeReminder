@@ -88,8 +88,23 @@ class ReminderManager: ObservableObject {
         }
     }
     
+    @Published var enableOverlay: Bool {
+        didSet {
+            UserDefaults.standard.set(enableOverlay, forKey: "enableOverlay")
+        }
+    }
+    
+    @Published var overlayDurationSeconds: Int {
+        didSet {
+            UserDefaults.standard.set(overlayDurationSeconds, forKey: "overlayDurationSeconds")
+        }
+    }
+    
     // Preset intervals in minutes
     static let presetIntervals = [15, 20, 25, 30, 45, 60, 90, 120]
+    
+    // Preset overlay durations in seconds
+    static let presetOverlayDurations = [5, 10, 15, 20, 30, 60]
     
     private init() {
         // Load saved settings or use defaults
@@ -98,6 +113,8 @@ class ReminderManager: ObservableObject {
         self.enableScreenSaver = UserDefaults.standard.object(forKey: "enableScreenSaver") as? Bool ?? false
         self.breakDurationMinutes = UserDefaults.standard.object(forKey: "breakDurationMinutes") as? Int ?? 5
         self.enableSound = UserDefaults.standard.object(forKey: "enableSound") as? Bool ?? true
+        self.enableOverlay = UserDefaults.standard.object(forKey: "enableOverlay") as? Bool ?? true
+        self.overlayDurationSeconds = UserDefaults.standard.object(forKey: "overlayDurationSeconds") as? Int ?? 10
         
         let soundRaw = UserDefaults.standard.string(forKey: "notificationSound") ?? "default"
         self.notificationSound = NotificationSound(rawValue: soundRaw) ?? .default

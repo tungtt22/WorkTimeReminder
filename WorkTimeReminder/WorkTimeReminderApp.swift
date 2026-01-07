@@ -18,8 +18,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var timer: Timer?
     var displayTimer: Timer?  // Timer to update status bar display
     var reminderManager = ReminderManager.shared
+    var shouldTerminate = false  // Track if user wants to quit
+    
+    // IMPORTANT: Prevent app from quitting when windows are closed
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
+    }
+    
+    // Only terminate when user explicitly requests it
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if shouldTerminate {
+            return .terminateNow
+        }
+        return .terminateCancel
+    }
+    
+    // Called when user clicks Quit
+    func quitApp() {
+        shouldTerminate = true
+        NSApp.terminate(nil)
+    }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Setup menu bar FIRST
+        setupMenuBar()
+        
         // Request notification permission
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if granted {
@@ -27,9 +50,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             }
         }
         UNUserNotificationCenter.current().delegate = self
-        
-        // Setup menu bar
-        setupMenuBar()
         
         // Start timer if enabled
         if reminderManager.isEnabled {
@@ -304,6 +324,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     func triggerReminder() {
         sendNotification()
         
+        // Show full screen overlay if enabled
+        if reminderManager.enableOverlay {
+            BreakOverlayController.shared.showOverlay()
+        }
+        
         if reminderManager.enableScreenSaver {
             activateScreenSaver()
         }
@@ -311,6 +336,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Schedule next reminder
         let interval = TimeInterval(reminderManager.intervalMinutes * 60)
         reminderManager.nextReminderDate = Date().addingTimeInterval(interval)
+    }
+    
+    func showOverlay() {
+        BreakOverlayController.shared.showOverlay()
     }
     
     func sendNotification() {
