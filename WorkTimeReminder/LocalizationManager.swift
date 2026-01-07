@@ -168,6 +168,10 @@ struct L10n {
         lang == .vietnamese ? "Thời gian hiển thị" : "Display duration"
     }
     
+    var overlayColorLabel: String {
+        lang == .vietnamese ? "Màu sắc" : "Color"
+    }
+    
     var customDuration: String {
         lang == .vietnamese ? "Tùy chỉnh:" : "Custom:"
     }

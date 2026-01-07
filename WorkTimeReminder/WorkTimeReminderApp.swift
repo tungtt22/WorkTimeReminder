@@ -299,6 +299,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             if popover?.isShown == true {
                 popover?.performClose(nil)
             } else {
+                // Reset to main screen every time popover is shown
+                popover?.contentViewController = NSHostingController(rootView: ContentView(appDelegate: self))
                 popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
                 popover?.contentViewController?.view.window?.makeKey()
             }
