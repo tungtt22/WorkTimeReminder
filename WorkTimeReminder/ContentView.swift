@@ -55,55 +55,53 @@ struct MainScreenView: View {
     
     private var l10n: L10n { L10n.shared }
     
+    // Consistent accent color
+    private let accentColor = Color(red: 0.4, green: 0.6, blue: 0.8)
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
             headerView
             
-            Divider()
+            Divider().opacity(0.5)
             
-            ScrollView {
+            // Content
+            ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
-                    // Status Card
                     statusCard
-                    
-                    // Interval Selection
                     intervalSection
                 }
                 .padding(16)
             }
             
-            Divider()
+            Divider().opacity(0.5)
             
             // Footer
             footerView
         }
         .frame(width: 320, height: 420)
+        .background(Color(NSColor.windowBackgroundColor))
     }
     
     // MARK: - Header
     var headerView: some View {
-        HStack {
-            Image(systemName: "clock.badge.checkmark.fill")
-                .font(.system(size: 24))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [Color.orange, Color.red],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+        HStack(spacing: 12) {
+            // App icon
+            Image(systemName: "clock.fill")
+                .font(.system(size: 20))
+                .foregroundColor(accentColor)
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(l10n.appTitle)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13, weight: .semibold))
                 Text(l10n.appSubtitle)
-                    .font(.system(size: 11))
+                    .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
+            // Power toggle
             Toggle("", isOn: Binding(
                 get: { reminderManager.isEnabled },
                 set: { newValue in
@@ -115,53 +113,48 @@ struct MainScreenView: View {
                     }
                 }
             ))
-            .toggleStyle(SwitchToggleStyle(tint: .orange))
+            .toggleStyle(.switch)
+            .tint(accentColor)
             .labelsHidden()
         }
-        .padding(16)
-        .background(
-            LinearGradient(
-                colors: [Color.orange.opacity(0.1), Color.clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
     
     // MARK: - Status Card
     var statusCard: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             if reminderManager.isEnabled {
+                // Active status
                 HStack {
                     Circle()
-                        .fill(Color.green)
-                        .frame(width: 8, height: 8)
+                        .fill(Color.green.opacity(0.8))
+                        .frame(width: 6, height: 6)
                     Text(l10n.statusActive)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.green)
                     Spacer()
                 }
                 
                 if let nextDate = reminderManager.nextReminderDate {
+                    Divider().opacity(0.3)
+                    
                     HStack {
-                        Image(systemName: "bell.fill")
-                            .foregroundColor(.orange)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(l10n.nextReminder)
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                            TimeRemainingView(targetDate: nextDate)
-                        }
+                        Text(l10n.nextReminder)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
                         Spacer()
+                        TimeRemainingView(targetDate: nextDate)
                     }
                 }
             } else {
+                // Inactive status
                 HStack {
                     Circle()
-                        .fill(Color.gray)
-                        .frame(width: 8, height: 8)
+                        .fill(Color.gray.opacity(0.5))
+                        .frame(width: 6, height: 6)
                     Text(l10n.statusInactive)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
                 }
@@ -169,81 +162,99 @@ struct MainScreenView: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
         )
     }
     
     // MARK: - Interval Section
     var intervalSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
+            // Title
             HStack {
-                Image(systemName: "timer")
-                    .foregroundColor(.orange)
                 Text(l10n.workInterval)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13))
                 Spacer()
                 Text("\(reminderManager.intervalMinutes) \(l10n.minutes)")
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.orange)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.orange.opacity(0.15))
-                    .cornerRadius(6)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundColor(accentColor)
             }
             
-            // Preset buttons
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
-                ForEach(ReminderManager.presetIntervals, id: \.self) { interval in
+            // Stepper control
+            HStack {
+                Button(action: {
+                    if reminderManager.intervalMinutes > 5 {
+                        reminderManager.intervalMinutes -= 5
+                        if reminderManager.isEnabled {
+                            appDelegate?.startTimer()
+                        }
+                    }
+                }) {
+                    Image(systemName: "minus")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(accentColor)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(accentColor.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
+                
+                Spacer()
+                
+                Text("\(reminderManager.intervalMinutes)")
+                    .font(.system(size: 36, weight: .light, design: .rounded))
+                    .foregroundColor(.primary)
+                + Text(" \(l10n.minutes)")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Button(action: {
+                    if reminderManager.intervalMinutes < 180 {
+                        reminderManager.intervalMinutes += 5
+                        if reminderManager.isEnabled {
+                            appDelegate?.startTimer()
+                        }
+                    }
+                }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(accentColor)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(accentColor.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 8)
+            
+            // Quick presets
+            HStack(spacing: 8) {
+                ForEach([15, 25, 30, 45, 60], id: \.self) { interval in
                     Button(action: {
-                        withAnimation(.spring(response: 0.3)) {
-                            reminderManager.intervalMinutes = interval
-                            if reminderManager.isEnabled {
-                                appDelegate?.startTimer()
-                            }
+                        reminderManager.intervalMinutes = interval
+                        if reminderManager.isEnabled {
+                            appDelegate?.startTimer()
                         }
                     }) {
                         Text("\(interval)")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .font(.system(size: 11, weight: .medium))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
+                            .padding(.vertical, 6)
                             .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(reminderManager.intervalMinutes == interval ? 
-                                          Color.orange : Color(NSColor.controlBackgroundColor))
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(reminderManager.intervalMinutes == interval ?
+                                          accentColor : Color(NSColor.controlBackgroundColor))
                             )
-                            .foregroundColor(reminderManager.intervalMinutes == interval ? .white : .primary)
+                            .foregroundColor(reminderManager.intervalMinutes == interval ? .white : .secondary)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            
-            // Custom interval input
-            HStack {
-                TextField(l10n.customPlaceholder, text: $customInterval)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 120)
-                
-                Button(l10n.setButton) {
-                    if let value = Int(customInterval), value > 0 {
-                        reminderManager.intervalMinutes = value
-                        if reminderManager.isEnabled {
-                            appDelegate?.startTimer()
-                        }
-                        customInterval = ""
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
-                .disabled(Int(customInterval) == nil || Int(customInterval)! <= 0)
-            }
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
         )
     }
     
@@ -251,43 +262,28 @@ struct MainScreenView: View {
     var footerView: some View {
         HStack {
             Button(action: {
-                NSApplication.shared.terminate(nil)
+                appDelegate?.quitApp()
             }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "power")
-                    Text(l10n.quit)
-                }
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
+                Text(l10n.quit)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
             
             Spacer()
             
-            // Settings Button
             Button(action: onSettingsTapped) {
                 HStack(spacing: 4) {
-                    Image(systemName: "gearshape.fill")
+                    Image(systemName: "gearshape")
                     Text(l10n.settings)
                 }
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.purple, Color.blue],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                )
+                .foregroundColor(accentColor)
             }
             .buttonStyle(.plain)
         }
-        .padding(12)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 
@@ -300,328 +296,243 @@ struct SettingsScreenView: View {
     
     private var l10n: L10n { L10n.shared }
     
+    // Single accent color for consistency
+    private let accentColor = Color(red: 0.4, green: 0.6, blue: 0.8) // Soft blue
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            settingsHeader
+            HStack {
+                Button(action: onBackTapped) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(accentColor)
+                }
+                .buttonStyle(.plain)
+                
+                Spacer()
+                
+                Text(l10n.settings)
+                    .font(.system(size: 14, weight: .semibold))
+                
+                Spacer()
+                
+                Image(systemName: "chevron.left")
+                    .opacity(0)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             
-            Divider()
+            Divider().opacity(0.5)
             
-            ScrollView {
+            // Content
+            ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
-                    // Language Section
-                    languageSection
                     
-                    // Sound Section
-                    soundSection
+                    // MARK: - Language
+                    settingSection {
+                        HStack {
+                            Text(l10n.language)
+                                .font(.system(size: 13))
+                            
+                            Spacer()
+                            
+                            Picker("", selection: $localization.currentLanguage) {
+                                ForEach(Language.allCases, id: \.self) { lang in
+                                    Text(lang.displayName).tag(lang)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 160)
+                        }
+                    }
                     
-                    // Screen Saver Section
-                    screenSaverSection
+                    // MARK: - Break Alert
+                    settingSection {
+                        VStack(spacing: 12) {
+                            // Toggle row
+                            HStack {
+                                Text(l10n.overlay)
+                                    .font(.system(size: 13))
+                                Spacer()
+                                Toggle("", isOn: $reminderManager.enableOverlay)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                                    .tint(accentColor)
+                            }
+                            
+                            if reminderManager.enableOverlay {
+                                Divider().opacity(0.3)
+                                
+                                // Duration control
+                                HStack {
+                                    Text(l10n.overlayDuration)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Spacer()
+                                    
+                                    // Simple stepper
+                                    HStack(spacing: 12) {
+                                        Button(action: {
+                                            if reminderManager.overlayDurationSeconds > 5 {
+                                                reminderManager.overlayDurationSeconds -= 5
+                                            }
+                                        }) {
+                                            Image(systemName: "minus")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(accentColor)
+                                                .frame(width: 28, height: 28)
+                                                .background(Circle().fill(accentColor.opacity(0.1)))
+                                        }
+                                        .buttonStyle(.plain)
+                                        
+                                        Text("\(reminderManager.overlayDurationSeconds)s")
+                                            .font(.system(size: 14, weight: .medium, design: .monospaced))
+                                            .frame(width: 50)
+                                        
+                                        Button(action: {
+                                            if reminderManager.overlayDurationSeconds < 300 {
+                                                reminderManager.overlayDurationSeconds += 5
+                                            }
+                                        }) {
+                                            Image(systemName: "plus")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(accentColor)
+                                                .frame(width: 28, height: 28)
+                                                .background(Circle().fill(accentColor.opacity(0.1)))
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                
+                                // Preview
+                                Button(action: {
+                                    BreakOverlayController.shared.showOverlay()
+                                }) {
+                                    Text(l10n.previewSound)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(accentColor)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
                     
-                    // Notification Section
-                    notificationSection
+                    // MARK: - Sound
+                    settingSection {
+                        VStack(spacing: 12) {
+                            HStack {
+                                Text(l10n.sound)
+                                    .font(.system(size: 13))
+                                Spacer()
+                                Toggle("", isOn: $reminderManager.enableSound)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                                    .tint(accentColor)
+                            }
+                            
+                            if reminderManager.enableSound {
+                                Divider().opacity(0.3)
+                                
+                                // Sound picker - simple dropdown
+                                HStack {
+                                    Text(l10n.selectSound)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Spacer()
+                                    
+                                    Picker("", selection: $reminderManager.notificationSound) {
+                                        ForEach(NotificationSound.allCases, id: \.self) { sound in
+                                            Text(sound.displayName).tag(sound)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .onChange(of: reminderManager.notificationSound) { newSound in
+                                        reminderManager.playSound(newSound)
+                                    }
+                                }
+                            }
+                        }
+                    }
                     
-                    // About Section
-                    aboutSection
+                    // MARK: - Screen Saver
+                    settingSection {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(l10n.screenSaverTitle)
+                                    .font(.system(size: 13))
+                                Text(l10n.screenSaverSubtitle)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Toggle("", isOn: $reminderManager.enableScreenSaver)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                                .tint(accentColor)
+                        }
+                    }
+                    
+                    // MARK: - Test Button
+                    Button(action: {
+                        appDelegate?.sendNotification()
+                        if reminderManager.enableOverlay {
+                            BreakOverlayController.shared.showOverlay()
+                        }
+                        if reminderManager.enableScreenSaver {
+                            appDelegate?.activateScreenSaver()
+                        }
+                    }) {
+                        Text(l10n.testNotification)
+                            .font(.system(size: 13, weight: .medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    // Version
+                    Text("v1.0.0")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary.opacity(0.6))
+                        .padding(.top, 4)
                 }
                 .padding(16)
             }
         }
         .frame(width: 320, height: 420)
+        .background(Color(NSColor.windowBackgroundColor))
     }
     
-    // MARK: - Settings Header
-    var settingsHeader: some View {
-        HStack {
-            Button(action: onBackTapped) {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text(l10n.back)
-                        .font(.system(size: 13, weight: .medium))
-                }
-                .foregroundColor(.purple)
-            }
-            .buttonStyle(.plain)
-            
-            Spacer()
-            
-            Text(l10n.settings)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-            
-            Spacer()
-            
-            // Invisible placeholder for centering
-            HStack(spacing: 4) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 14, weight: .semibold))
-                Text(l10n.back)
-                    .font(.system(size: 13, weight: .medium))
-            }
-            .opacity(0)
-        }
-        .padding(16)
-        .background(
-            LinearGradient(
-                colors: [Color.purple.opacity(0.1), Color.clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-    }
-    
-    // MARK: - Language Section
-    var languageSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "globe")
-                    .foregroundColor(.purple)
-                Text(l10n.language)
-                    .font(.system(size: 13, weight: .medium))
-                Spacer()
-            }
-            
-            HStack(spacing: 8) {
-                ForEach(Language.allCases, id: \.self) { lang in
-                    Button(action: {
-                        withAnimation(.spring(response: 0.3)) {
-                            localization.currentLanguage = lang
-                        }
-                    }) {
-                        HStack {
-                            Text(lang.displayName)
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(localization.currentLanguage == lang ?
-                                      Color.purple : Color(NSColor.controlBackgroundColor))
-                        )
-                        .foregroundColor(localization.currentLanguage == lang ? .white : .primary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
-        )
-    }
-    
-    // MARK: - Screen Saver Section
-    var screenSaverSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "tv.fill")
-                    .foregroundColor(.blue)
-                Text("Screen Saver")
-                    .font(.system(size: 13, weight: .medium))
-                Spacer()
-            }
-            
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(l10n.screenSaverTitle)
-                        .font(.system(size: 12))
-                    Text(l10n.screenSaverSubtitle)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Toggle("", isOn: $reminderManager.enableScreenSaver)
-                    .toggleStyle(SwitchToggleStyle(tint: .blue))
-                    .labelsHidden()
-            }
-            .padding(10)
+    // MARK: - Setting Section
+    @ViewBuilder
+    private func settingSection<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.windowBackgroundColor))
+                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
             )
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
-        )
     }
+}
+
+// MARK: - Settings Card (unused, kept for compatibility)
+struct SettingsCard<Content: View>: View {
+    @ViewBuilder var content: Content
     
-    // MARK: - Sound Section
-    var soundSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "speaker.wave.3.fill")
-                    .foregroundColor(.green)
-                Text(l10n.sound)
-                    .font(.system(size: 13, weight: .medium))
-                Spacer()
-            }
-            
-            // Enable sound toggle
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(l10n.enableSound)
-                        .font(.system(size: 12))
-                    Text(l10n.soundWhenNotify)
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Toggle("", isOn: $reminderManager.enableSound)
-                    .toggleStyle(SwitchToggleStyle(tint: .green))
-                    .labelsHidden()
-            }
-            .padding(10)
+    var body: some View {
+        content
+            .padding(14)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.windowBackgroundColor))
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(NSColor.controlBackgroundColor))
             )
-            
-            // Sound picker
-            if reminderManager.enableSound {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(l10n.selectSound)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                    
-                    // Sound grid
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3), spacing: 6) {
-                        ForEach(NotificationSound.allCases, id: \.self) { sound in
-                            Button(action: {
-                                withAnimation(.spring(response: 0.2)) {
-                                    reminderManager.notificationSound = sound
-                                    reminderManager.playSound(sound)
-                                }
-                            }) {
-                                Text(sound.displayName)
-                                    .font(.system(size: 10, weight: .medium))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(reminderManager.notificationSound == sound ?
-                                                  Color.green : Color(NSColor.controlBackgroundColor))
-                                    )
-                                    .foregroundColor(reminderManager.notificationSound == sound ? .white : .primary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(NSColor.windowBackgroundColor))
-                )
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
-        )
-    }
-    
-    // MARK: - Notification Section
-    var notificationSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "bell.badge.fill")
-                    .foregroundColor(.orange)
-                Text(l10n.notifications)
-                    .font(.system(size: 13, weight: .medium))
-                Spacer()
-            }
-            
-            Button(action: {
-                appDelegate?.sendNotification()
-                if reminderManager.enableScreenSaver {
-                    appDelegate?.activateScreenSaver()
-                }
-            }) {
-                HStack {
-                    Image(systemName: "bell.and.waves.left.and.right")
-                    Text(l10n.testNotification)
-                }
-                .font(.system(size: 12, weight: .medium))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.orange.opacity(0.2), Color.red.opacity(0.2)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                )
-                .foregroundColor(.orange)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
-        )
-    }
-    
-    // MARK: - About Section
-    var aboutSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "info.circle.fill")
-                    .foregroundColor(.gray)
-                Text(l10n.about)
-                    .font(.system(size: 13, weight: .medium))
-                Spacer()
-            }
-            
-            VStack(spacing: 8) {
-                HStack {
-                    Text("Version")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("1.0.0")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                }
-                
-                Divider()
-                
-                HStack {
-                    Text(l10n.developer)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("Your Name")
-                        .font(.system(size: 11, weight: .medium))
-                }
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.windowBackgroundColor))
-            )
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
-        )
     }
 }
 

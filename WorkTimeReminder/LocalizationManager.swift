@@ -151,6 +151,52 @@ struct L10n {
         lang == .vietnamese ? "Nghe thử" : "Preview"
     }
     
+    // MARK: - Overlay Settings
+    var overlay: String {
+        lang == .vietnamese ? "Màn hình lớn" : "Full Screen Alert"
+    }
+    
+    var enableOverlay: String {
+        lang == .vietnamese ? "Hiển thị màn hình lớn" : "Show full screen alert"
+    }
+    
+    var overlaySubtitle: String {
+        lang == .vietnamese ? "Hiện chữ to trên toàn màn hình" : "Display large text on screen"
+    }
+    
+    var overlayDuration: String {
+        lang == .vietnamese ? "Thời gian hiển thị" : "Display duration"
+    }
+    
+    var customDuration: String {
+        lang == .vietnamese ? "Tùy chỉnh:" : "Custom:"
+    }
+    
+    var seconds: String {
+        lang == .vietnamese ? "giây" : "sec"
+    }
+    
+    // MARK: - Break Overlay Screen
+    var breakTimeTitle: String {
+        lang == .vietnamese ? "NGHỈ NGƠI THÔI!" : "TAKE A BREAK!"
+    }
+    
+    var breakTimeSubtitle: String {
+        lang == .vietnamese ? "Hãy đứng dậy, thư giãn và nghỉ ngơi đôi mắt" : "Stand up, stretch and rest your eyes"
+    }
+    
+    var dismissButton: String {
+        lang == .vietnamese ? "Đóng" : "Dismiss"
+    }
+    
+    var closingIn: String {
+        lang == .vietnamese ? "Tự động đóng sau" : "Closing in"
+    }
+    
+    var pressEscToClose: String {
+        lang == .vietnamese ? "Nhấn ESC để đóng" : "Press ESC to close"
+    }
+    
     // MARK: - Notifications
     var notificationTitle: String {
         lang == .vietnamese ? "⏰ Nghỉ ngơi thôi!" : "⏰ Time for a break!"
