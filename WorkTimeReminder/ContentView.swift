@@ -304,9 +304,19 @@ struct SettingsScreenView: View {
             // Header
             HStack {
                 Button(action: onBackTapped) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(accentColor)
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(l10n.back)
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundColor(accentColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(accentColor.opacity(0.1))
+                    )
                 }
                 .buttonStyle(.plain)
                 
@@ -317,11 +327,19 @@ struct SettingsScreenView: View {
                 
                 Spacer()
                 
-                Image(systemName: "chevron.left")
-                    .opacity(0)
+                // Invisible placeholder for centering
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(l10n.back)
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .opacity(0)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             
             Divider().opacity(0.5)
             
@@ -403,6 +421,34 @@ struct SettingsScreenView: View {
                                                 .background(Circle().fill(accentColor.opacity(0.1)))
                                         }
                                         .buttonStyle(.plain)
+                                    }
+                                }
+                                
+                                // Color picker
+                                HStack {
+                                    Text(l10n.overlayColorLabel)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Spacer()
+                                    
+                                    HStack(spacing: 6) {
+                                        ForEach(OverlayColor.allCases, id: \.self) { color in
+                                            Button(action: {
+                                                reminderManager.overlayColor = color
+                                            }) {
+                                                Circle()
+                                                    .fill(color.primaryColor)
+                                                    .frame(width: 22, height: 22)
+                                                    .overlay(
+                                                        Circle()
+                                                            .stroke(Color.white, lineWidth: reminderManager.overlayColor == color ? 2 : 0)
+                                                    )
+                                                    .shadow(color: color.primaryColor.opacity(0.5), 
+                                                            radius: reminderManager.overlayColor == color ? 3 : 0)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
                                     }
                                 }
                                 

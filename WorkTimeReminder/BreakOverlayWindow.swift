@@ -156,6 +156,7 @@ class OverlayPanel: NSPanel {
 // MARK: - Break Overlay SwiftUI View
 struct BreakOverlayView: View {
     @ObservedObject var localization = LocalizationManager.shared
+    @ObservedObject var reminderManager = ReminderManager.shared
     var onDismiss: () -> Void
     
     @State private var animate = false
@@ -165,10 +166,14 @@ struct BreakOverlayView: View {
     
     private var l10n: L10n { L10n.shared }
     
+    // Get colors from selected theme
+    private var primaryColor: Color { reminderManager.overlayColor.primaryColor }
+    private var secondaryColor: Color { reminderManager.overlayColor.secondaryColor }
+    
     var body: some View {
         ZStack {
             // Dark background - clicking dismisses
-            Color.black.opacity(0.85)
+            Color.black.opacity(0.9)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -178,8 +183,8 @@ struct BreakOverlayView: View {
             // Animated gradient background
             RadialGradient(
                 gradient: Gradient(colors: [
-                    Color.orange.opacity(0.3),
-                    Color.red.opacity(0.2),
+                    primaryColor.opacity(0.4),
+                    secondaryColor.opacity(0.2),
                     Color.clear
                 ]),
                 center: .center,
@@ -196,13 +201,13 @@ struct BreakOverlayView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [Color.orange, Color.red],
+                                colors: [primaryColor, secondaryColor],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 120, height: 120)
-                        .shadow(color: .orange.opacity(0.5), radius: animate ? 30 : 20)
+                        .shadow(color: primaryColor.opacity(0.5), radius: animate ? 30 : 20)
                     
                     Image(systemName: "cup.and.saucer.fill")
                         .font(.system(size: 50))
@@ -232,7 +237,7 @@ struct BreakOverlayView: View {
                     
                     Text("\(countdown)")
                         .font(.system(size: 48, weight: .bold, design: .monospaced))
-                        .foregroundColor(.orange)
+                        .foregroundColor(primaryColor)
                 }
                 .padding(.top, 20)
                 
@@ -250,10 +255,10 @@ struct BreakOverlayView: View {
                     .padding(.vertical, 16)
                     .background(
                         Capsule()
-                            .fill(Color.white.opacity(0.2))
+                            .fill(Color.white.opacity(0.15))
                             .overlay(
                                 Capsule()
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
                             )
                     )
                 }
