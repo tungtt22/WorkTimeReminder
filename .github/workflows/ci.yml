@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build app
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Verify build
+        run: |
+          ls -la build/
+          ls -la build/WorkTimeReminder.app/Contents/
+          ls -la build/WorkTimeReminder.app/Contents/MacOS/
+          ls -la build/WorkTimeReminder.app/Contents/Resources/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorkTimeReminder-app
+          path: build/WorkTimeReminder.app
+          retention-days: 7
+

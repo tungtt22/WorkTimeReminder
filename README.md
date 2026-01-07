@@ -16,7 +16,28 @@ A macOS menu bar application that reminds you to take regular breaks while worki
 
 ## 🚀 Installation
 
-### Option 1: Build from Xcode
+### Option 1: Homebrew (Recommended)
+
+```bash
+# Add the tap
+brew tap tungtt22/tap
+
+# Install the app
+brew install --cask work-time-reminder
+```
+
+To update:
+```bash
+brew upgrade --cask work-time-reminder
+```
+
+### Option 2: Download from Releases
+
+1. Go to [Releases](https://github.com/tungtt22/WorkTimeReminder/releases)
+2. Download the latest `.dmg` file
+3. Open the DMG and drag the app to Applications folder
+
+### Option 3: Build from Xcode
 
 1. Open Xcode and create a new project:
    - File → New → Project
@@ -35,7 +56,7 @@ A macOS menu bar application that reminds you to take regular breaks while worki
 
 4. Build and run (Cmd + R)
 
-### Option 2: Build from Terminal
+### Option 4: Build from Terminal
 
 ```bash
 cd WorkTimeReminder

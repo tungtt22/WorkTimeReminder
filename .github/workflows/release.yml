@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update version in Info.plist
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.VERSION }}" WorkTimeReminder/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ steps.version.outputs.VERSION }}" WorkTimeReminder/Info.plist
+
+      - name: Build app
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Create DMG
+        run: |
+          # Create a temporary directory for DMG contents
+          mkdir -p dmg_contents
+          cp -r build/WorkTimeReminder.app dmg_contents/
+          
+          # Create symbolic link to Applications folder
+          ln -s /Applications dmg_contents/Applications
+          
+          # Create DMG
+          hdiutil create -volname "WorkTimeReminder" \
+            -srcfolder dmg_contents \
+            -ov -format UDZO \
+            WorkTimeReminder-${{ steps.version.outputs.VERSION }}.dmg
+          
+          # Clean up
+          rm -rf dmg_contents
+
+      - name: Create ZIP
+        run: |
+          cd build
+          zip -r ../WorkTimeReminder-${{ steps.version.outputs.VERSION }}.zip WorkTimeReminder.app
+          cd ..
+
+      - name: Calculate SHA256
+        id: sha256
+        run: |
+          echo "DMG_SHA256=$(shasum -a 256 WorkTimeReminder-${{ steps.version.outputs.VERSION }}.dmg | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          echo "ZIP_SHA256=$(shasum -a 256 WorkTimeReminder-${{ steps.version.outputs.VERSION }}.zip | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: WorkTimeReminder v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Work Time Reminder v${{ steps.version.outputs.VERSION }}
+            
+            ### Installation
+            
+            #### Via Homebrew (Recommended)
+            ```bash
+            brew tap tungtt22/tap
+            brew install --cask work-time-reminder
+            ```
+            
+            #### Manual Installation
+            1. Download `WorkTimeReminder-${{ steps.version.outputs.VERSION }}.dmg`
+            2. Open the DMG file
+            3. Drag WorkTimeReminder to Applications folder
+            
+            ### SHA256 Checksums
+            - DMG: `${{ steps.sha256.outputs.DMG_SHA256 }}`
+            - ZIP: `${{ steps.sha256.outputs.ZIP_SHA256 }}`
+            
+            ### Changes
+            - See commit history for changes
+          files: |
+            WorkTimeReminder-${{ steps.version.outputs.VERSION }}.dmg
+            WorkTimeReminder-${{ steps.version.outputs.VERSION }}.zip
+          draft: false
+          prerelease: false
+
+      - name: Output Homebrew formula info
+        run: |
+          echo "=== Homebrew Cask Formula Info ==="
+          echo "Version: ${{ steps.version.outputs.VERSION }}"
+          echo "ZIP SHA256: ${{ steps.sha256.outputs.ZIP_SHA256 }}"
+          echo "DMG SHA256: ${{ steps.sha256.outputs.DMG_SHA256 }}"
+          echo ""
+          echo "Update your Homebrew tap with this SHA256!"
+
