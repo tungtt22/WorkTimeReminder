@@ -1,0 +1,146 @@
+import Foundation
+import SwiftUI
+
+enum Language: String, CaseIterable {
+    case vietnamese = "vi"
+    case english = "en"
+    
+    var displayName: String {
+        switch self {
+        case .vietnamese: return "🇻🇳 Tiếng Việt"
+        case .english: return "🇺🇸 English"
+        }
+    }
+    
+    var shortName: String {
+        switch self {
+        case .vietnamese: return "VI"
+        case .english: return "EN"
+        }
+    }
+}
+
+class LocalizationManager: ObservableObject {
+    static let shared = LocalizationManager()
+    
+    @Published var currentLanguage: Language {
+        didSet {
+            UserDefaults.standard.set(currentLanguage.rawValue, forKey: "appLanguage")
+        }
+    }
+    
+    private init() {
+        let savedLanguage = UserDefaults.standard.string(forKey: "appLanguage") ?? "vi"
+        self.currentLanguage = Language(rawValue: savedLanguage) ?? .vietnamese
+    }
+    
+    func toggleLanguage() {
+        currentLanguage = currentLanguage == .vietnamese ? .english : .vietnamese
+    }
+}
+
+// MARK: - Localized Strings
+struct L10n {
+    static var shared: L10n { L10n() }
+    
+    private var lang: Language {
+        LocalizationManager.shared.currentLanguage
+    }
+    
+    // MARK: - App Title
+    var appTitle: String {
+        lang == .vietnamese ? "Work Time Reminder" : "Work Time Reminder"
+    }
+    
+    var appSubtitle: String {
+        lang == .vietnamese ? "Nhắc nhở nghỉ ngơi" : "Break Reminder"
+    }
+    
+    // MARK: - Status
+    var statusActive: String {
+        lang == .vietnamese ? "Đang hoạt động" : "Active"
+    }
+    
+    var statusInactive: String {
+        lang == .vietnamese ? "Đã tắt" : "Disabled"
+    }
+    
+    var nextReminder: String {
+        lang == .vietnamese ? "Nhắc nhở tiếp theo" : "Next reminder"
+    }
+    
+    // MARK: - Interval Section
+    var workInterval: String {
+        lang == .vietnamese ? "Khoảng thời gian làm việc" : "Work interval"
+    }
+    
+    var minutes: String {
+        lang == .vietnamese ? "phút" : "min"
+    }
+    
+    var customPlaceholder: String {
+        lang == .vietnamese ? "Tùy chỉnh (phút)" : "Custom (minutes)"
+    }
+    
+    var setButton: String {
+        lang == .vietnamese ? "Đặt" : "Set"
+    }
+    
+    // MARK: - Settings Section
+    var settings: String {
+        lang == .vietnamese ? "Cài đặt" : "Settings"
+    }
+    
+    var screenSaverTitle: String {
+        lang == .vietnamese ? "Bật Screen Saver" : "Enable Screen Saver"
+    }
+    
+    var screenSaverSubtitle: String {
+        lang == .vietnamese ? "Tự động bật khi đến giờ nghỉ" : "Auto activate on break time"
+    }
+    
+    var testNotification: String {
+        lang == .vietnamese ? "Kiểm tra thông báo" : "Test notification"
+    }
+    
+    var language: String {
+        lang == .vietnamese ? "Ngôn ngữ" : "Language"
+    }
+    
+    // MARK: - Footer
+    var quit: String {
+        lang == .vietnamese ? "Thoát" : "Quit"
+    }
+    
+    // MARK: - Navigation
+    var back: String {
+        lang == .vietnamese ? "Quay lại" : "Back"
+    }
+    
+    // MARK: - Settings Screen
+    var notifications: String {
+        lang == .vietnamese ? "Thông báo" : "Notifications"
+    }
+    
+    var about: String {
+        lang == .vietnamese ? "Thông tin" : "About"
+    }
+    
+    var developer: String {
+        lang == .vietnamese ? "Nhà phát triển" : "Developer"
+    }
+    
+    // MARK: - Notifications
+    var notificationTitle: String {
+        lang == .vietnamese ? "⏰ Nghỉ ngơi thôi!" : "⏰ Time for a break!"
+    }
+    
+    func notificationBody(minutes: Int) -> String {
+        if lang == .vietnamese {
+            return "Bạn đã làm việc \(minutes) phút. Hãy nghỉ ngơi và thư giãn đôi mắt!"
+        } else {
+            return "You've been working for \(minutes) minutes. Take a break and rest your eyes!"
+        }
+    }
+}
+

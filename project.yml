@@ -1,0 +1,37 @@
+# XcodeGen Project Specification
+# Run: xcodegen generate
+
+name: WorkTimeReminder
+options:
+  bundleIdPrefix: com.yourname
+  deploymentTarget:
+    macOS: "12.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  WorkTimeReminder:
+    type: application
+    platform: macOS
+    sources:
+      - path: WorkTimeReminder
+        excludes:
+          - "*.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.WorkTimeReminder
+        INFOPLIST_FILE: WorkTimeReminder/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WorkTimeReminder/WorkTimeReminder.entitlements
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "12.0"
+        # Menu bar app (no dock icon)
+        LSUIElement: true
+
