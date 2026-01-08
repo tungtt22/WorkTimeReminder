@@ -19,6 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var displayTimer: Timer?  // Timer to update status bar display
     var reminderManager = ReminderManager.shared
     var shouldTerminate = false  // Track if user wants to quit
+    var screenLockTime: Date?  // Track when screen was locked/sleep
     
     // IMPORTANT: Prevent app from quitting when windows are closed
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -58,6 +59,96 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         // Start display timer to update status bar
         startDisplayTimer()
+        
+        // Setup screen lock/wake monitoring
+        setupScreenLockMonitoring()
+    }
+    
+    // MARK: - Screen Lock Monitoring
+    func setupScreenLockMonitoring() {
+        let workspace = NSWorkspace.shared
+        let notificationCenter = workspace.notificationCenter
+        
+        // Monitor screen sleep (includes screen saver)
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(handleScreenSleep),
+            name: NSWorkspace.screensDidSleepNotification,
+            object: nil
+        )
+        
+        // Monitor screen wake
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(handleScreenWake),
+            name: NSWorkspace.screensDidWakeNotification,
+            object: nil
+        )
+        
+        // Monitor session lock (user locks screen)
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(handleScreenSleep),
+            name: NSWorkspace.sessionDidResignActiveNotification,
+            object: nil
+        )
+        
+        // Monitor session unlock
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(handleScreenWake),
+            name: NSWorkspace.sessionDidBecomeActiveNotification,
+            object: nil
+        )
+        
+        // Monitor screen saver start
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleScreenSleep),
+            name: NSNotification.Name("com.apple.screensaver.didstart"),
+            object: nil
+        )
+        
+        // Monitor screen saver stop
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleScreenWake),
+            name: NSNotification.Name("com.apple.screensaver.didstop"),
+            object: nil
+        )
+    }
+    
+    @objc func handleScreenSleep() {
+        // Only track if not already tracking
+        if screenLockTime == nil {
+            screenLockTime = Date()
+            print("Screen locked/sleep at: \(screenLockTime!)")
+        }
+    }
+    
+    @objc func handleScreenWake() {
+        guard let lockTime = screenLockTime else { return }
+        
+        let awayDuration = Date().timeIntervalSince(lockTime)
+        let breakDurationSeconds = TimeInterval(reminderManager.breakDurationMinutes * 60)
+        
+        print("Screen wake. Away for: \(Int(awayDuration)) seconds, break duration: \(Int(breakDurationSeconds)) seconds")
+        
+        // Reset lock time
+        screenLockTime = nil
+        
+        // Check if auto reset is enabled and away duration >= break duration
+        if reminderManager.autoResetOnScreenLock && 
+           reminderManager.isEnabled && 
+           awayDuration >= breakDurationSeconds {
+            
+            print("Auto resetting timer - user took a break of \(Int(awayDuration/60)) minutes")
+            
+            // Reset the timer
+            DispatchQueue.main.async { [weak self] in
+                self?.startTimer()
+            }
+        }
     }
     
     func setupMenuBar() {

@@ -201,6 +201,23 @@ struct L10n {
         lang == .vietnamese ? "Nhấn ESC để đóng" : "Press ESC to close"
     }
     
+    // MARK: - Auto Reset Settings
+    var autoReset: String {
+        lang == .vietnamese ? "Tự động reset" : "Auto Reset"
+    }
+    
+    var autoResetTitle: String {
+        lang == .vietnamese ? "Tự động reset khi nghỉ" : "Auto reset after break"
+    }
+    
+    var autoResetSubtitle: String {
+        lang == .vietnamese ? "Reset timer khi khoá màn hình đủ thời gian nghỉ" : "Reset timer when screen locked for break duration"
+    }
+    
+    var breakDuration: String {
+        lang == .vietnamese ? "Thời gian nghỉ" : "Break duration"
+    }
+    
     // MARK: - Notifications
     var notificationTitle: String {
         lang == .vietnamese ? "⏰ Nghỉ ngơi thôi!" : "⏰ Time for a break!"
