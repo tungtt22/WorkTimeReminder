@@ -523,6 +523,74 @@ struct SettingsScreenView: View {
                         }
                     }
                     
+                    // MARK: - Auto Reset
+                    settingSection {
+                        VStack(spacing: 12) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(l10n.autoResetTitle)
+                                        .font(.system(size: 13))
+                                    Text(l10n.autoResetSubtitle)
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Toggle("", isOn: $reminderManager.autoResetOnScreenLock)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                                    .tint(accentColor)
+                            }
+                            
+                            if reminderManager.autoResetOnScreenLock {
+                                Divider().opacity(0.3)
+                                
+                                // Break duration control
+                                HStack {
+                                    Text(l10n.breakDuration)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.secondary)
+                                    
+                                    Spacer()
+                                    
+                                    // Simple stepper for break duration
+                                    HStack(spacing: 12) {
+                                        Button(action: {
+                                            if reminderManager.breakDurationMinutes > 1 {
+                                                reminderManager.breakDurationMinutes -= 1
+                                            }
+                                        }) {
+                                            Image(systemName: "minus")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(accentColor)
+                                                .frame(width: 28, height: 28)
+                                                .background(Circle().fill(accentColor.opacity(0.1)))
+                                        }
+                                        .buttonStyle(.plain)
+                                        
+                                        Text("\(reminderManager.breakDurationMinutes) \(l10n.minutes)")
+                                            .font(.system(size: 14, weight: .medium, design: .monospaced))
+                                            .frame(width: 60)
+                                        
+                                        Button(action: {
+                                            if reminderManager.breakDurationMinutes < 30 {
+                                                reminderManager.breakDurationMinutes += 1
+                                            }
+                                        }) {
+                                            Image(systemName: "plus")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(accentColor)
+                                                .frame(width: 28, height: 28)
+                                                .background(Circle().fill(accentColor.opacity(0.1)))
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
                     // MARK: - Test Button
                     Button(action: {
                         appDelegate?.sendNotification()

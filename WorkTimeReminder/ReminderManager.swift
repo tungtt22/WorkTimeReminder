@@ -158,6 +158,12 @@ class ReminderManager: ObservableObject {
         }
     }
     
+    @Published var autoResetOnScreenLock: Bool {
+        didSet {
+            UserDefaults.standard.set(autoResetOnScreenLock, forKey: "autoResetOnScreenLock")
+        }
+    }
+    
     // Preset intervals in minutes
     static let presetIntervals = [15, 20, 25, 30, 45, 60, 90, 120]
     
@@ -173,6 +179,7 @@ class ReminderManager: ObservableObject {
         self.enableSound = UserDefaults.standard.object(forKey: "enableSound") as? Bool ?? true
         self.enableOverlay = UserDefaults.standard.object(forKey: "enableOverlay") as? Bool ?? true
         self.overlayDurationSeconds = UserDefaults.standard.object(forKey: "overlayDurationSeconds") as? Int ?? 10
+        self.autoResetOnScreenLock = UserDefaults.standard.object(forKey: "autoResetOnScreenLock") as? Bool ?? true
         
         let soundRaw = UserDefaults.standard.string(forKey: "notificationSound") ?? "default"
         self.notificationSound = NotificationSound(rawValue: soundRaw) ?? .default
