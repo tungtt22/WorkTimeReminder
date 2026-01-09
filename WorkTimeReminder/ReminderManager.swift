@@ -3,6 +3,12 @@ import Combine
 import UserNotifications
 import AppKit
 import SwiftUI
+import IOKit.pwr_mgt
+
+// Notification for keep awake changes
+extension Notification.Name {
+    static let keepAwakeChanged = Notification.Name("keepAwakeChanged")
+}
 
 // MARK: - Overlay Color Options
 enum OverlayColor: String, CaseIterable {
@@ -164,6 +170,14 @@ class ReminderManager: ObservableObject {
         }
     }
     
+    @Published var keepAwake: Bool {
+        didSet {
+            UserDefaults.standard.set(keepAwake, forKey: "keepAwake")
+            // Notify AppDelegate to update power assertion
+            NotificationCenter.default.post(name: .keepAwakeChanged, object: nil)
+        }
+    }
+    
     // Preset intervals in minutes
     static let presetIntervals = [15, 20, 25, 30, 45, 60, 90, 120]
     
@@ -180,6 +194,7 @@ class ReminderManager: ObservableObject {
         self.enableOverlay = UserDefaults.standard.object(forKey: "enableOverlay") as? Bool ?? true
         self.overlayDurationSeconds = UserDefaults.standard.object(forKey: "overlayDurationSeconds") as? Int ?? 10
         self.autoResetOnScreenLock = UserDefaults.standard.object(forKey: "autoResetOnScreenLock") as? Bool ?? true
+        self.keepAwake = UserDefaults.standard.object(forKey: "keepAwake") as? Bool ?? false
         
         let soundRaw = UserDefaults.standard.string(forKey: "notificationSound") ?? "default"
         self.notificationSound = NotificationSound(rawValue: soundRaw) ?? .default

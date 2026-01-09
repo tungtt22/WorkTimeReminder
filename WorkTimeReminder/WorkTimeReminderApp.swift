@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import IOKit.pwr_mgt
 
 @main
 struct WorkTimeReminderApp: App {
@@ -20,6 +21,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var reminderManager = ReminderManager.shared
     var shouldTerminate = false  // Track if user wants to quit
     var screenLockTime: Date?  // Track when screen was locked/sleep
+    var powerAssertionID: IOPMAssertionID = 0  // Power assertion to keep screen awake
+    var isPowerAssertionActive = false
     
     // IMPORTANT: Prevent app from quitting when windows are closed
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -62,6 +65,56 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         // Setup screen lock/wake monitoring
         setupScreenLockMonitoring()
+        
+        // Setup keep awake observer
+        setupKeepAwakeObserver()
+        
+        // Apply initial keep awake state
+        updatePowerAssertion()
+    }
+    
+    // MARK: - Keep Awake / Power Management
+    func setupKeepAwakeObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleKeepAwakeChanged),
+            name: .keepAwakeChanged,
+            object: nil
+        )
+    }
+    
+    @objc func handleKeepAwakeChanged() {
+        updatePowerAssertion()
+    }
+    
+    func updatePowerAssertion() {
+        let shouldKeepAwake = reminderManager.keepAwake && reminderManager.isEnabled
+        
+        if shouldKeepAwake && !isPowerAssertionActive {
+            // Create power assertion to prevent display sleep
+            let reasonForActivity = "Work Time Reminder - Keeping display awake during work session" as CFString
+            let result = IOPMAssertionCreateWithName(
+                kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
+                IOPMAssertionLevel(kIOPMAssertionLevelOn),
+                reasonForActivity,
+                &powerAssertionID
+            )
+            
+            if result == kIOReturnSuccess {
+                isPowerAssertionActive = true
+                print("Power assertion created - display will stay awake")
+            } else {
+                print("Failed to create power assertion")
+            }
+        } else if !shouldKeepAwake && isPowerAssertionActive {
+            // Release power assertion
+            let result = IOPMAssertionRelease(powerAssertionID)
+            if result == kIOReturnSuccess {
+                isPowerAssertionActive = false
+                powerAssertionID = 0
+                print("Power assertion released - display can sleep normally")
+            }
+        }
     }
     
     // MARK: - Screen Lock Monitoring
@@ -405,6 +458,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             self?.triggerReminder()
         }
         reminderManager.nextReminderDate = Date().addingTimeInterval(interval)
+        updatePowerAssertion()
     }
     
     func stopTimer() {
@@ -412,6 +466,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         timer = nil
         reminderManager.nextReminderDate = nil
         updateStatusBarDisplay()
+        updatePowerAssertion()
     }
     
     func triggerReminder() {
