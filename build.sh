@@ -11,6 +11,7 @@ APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
+SOURCE_DIR="WorkTimeReminder"
 
 echo "🔨 Building $APP_NAME..."
 
@@ -18,6 +19,9 @@ echo "🔨 Building $APP_NAME..."
 rm -rf "$BUILD_DIR"
 mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
+
+# Find all Swift files in the source directory
+SWIFT_FILES=$(find "$SOURCE_DIR" -name "*.swift" -type f)
 
 # Compile Swift files
 echo "📦 Compiling Swift files..."
@@ -27,16 +31,16 @@ swiftc -O \
     -parse-as-library \
     -emit-executable \
     -o "$MACOS_DIR/$APP_NAME" \
-    WorkTimeReminder/*.swift
+    $SWIFT_FILES
 
 # Copy Info.plist
 echo "📄 Copying Info.plist..."
-cp WorkTimeReminder/Info.plist "$CONTENTS_DIR/"
+cp "$SOURCE_DIR/Resources/Info.plist" "$CONTENTS_DIR/"
 
 # Copy app icon
-if [ -f "WorkTimeReminder/AppIcon.icns" ]; then
+if [ -f "$SOURCE_DIR/Resources/AppIcon.icns" ]; then
     echo "🎨 Copying app icon..."
-    cp WorkTimeReminder/AppIcon.icns "$RESOURCES_DIR/"
+    cp "$SOURCE_DIR/Resources/AppIcon.icns" "$RESOURCES_DIR/"
 fi
 
 # Create PkgInfo
@@ -50,4 +54,3 @@ echo "  open $APP_BUNDLE"
 echo ""
 echo "To install (copy to Applications):"
 echo "  cp -r $APP_BUNDLE /Applications/"
-

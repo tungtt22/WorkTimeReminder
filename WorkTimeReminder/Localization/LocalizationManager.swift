@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Language
 enum Language: String, CaseIterable {
     case vietnamese = "vi"
     case english = "en"
@@ -20,6 +21,7 @@ enum Language: String, CaseIterable {
     }
 }
 
+// MARK: - Localization Manager
 class LocalizationManager: ObservableObject {
     static let shared = LocalizationManager()
     
@@ -47,9 +49,9 @@ struct L10n {
         LocalizationManager.shared.currentLanguage
     }
     
-    // MARK: - App Title
+    // MARK: - App
     var appTitle: String {
-        lang == .vietnamese ? "Work Time Reminder" : "Work Time Reminder"
+        "Work Time Reminder"
     }
     
     var appSubtitle: String {
@@ -69,7 +71,7 @@ struct L10n {
         lang == .vietnamese ? "Nhắc nhở tiếp theo" : "Next reminder"
     }
     
-    // MARK: - Interval Section
+    // MARK: - Interval
     var workInterval: String {
         lang == .vietnamese ? "Khoảng thời gian làm việc" : "Work interval"
     }
@@ -86,7 +88,7 @@ struct L10n {
         lang == .vietnamese ? "Đặt" : "Set"
     }
     
-    // MARK: - Settings Section
+    // MARK: - Settings
     var settings: String {
         lang == .vietnamese ? "Cài đặt" : "Settings"
     }
@@ -117,7 +119,7 @@ struct L10n {
         lang == .vietnamese ? "Quay lại" : "Back"
     }
     
-    // MARK: - Settings Screen
+    // MARK: - About
     var notifications: String {
         lang == .vietnamese ? "Thông báo" : "Notifications"
     }
@@ -130,7 +132,7 @@ struct L10n {
         lang == .vietnamese ? "Nhà phát triển" : "Developer"
     }
     
-    // MARK: - Sound Settings
+    // MARK: - Sound
     var sound: String {
         lang == .vietnamese ? "Âm thanh" : "Sound"
     }
@@ -151,7 +153,7 @@ struct L10n {
         lang == .vietnamese ? "Nghe thử" : "Preview"
     }
     
-    // MARK: - Overlay Settings
+    // MARK: - Overlay
     var overlay: String {
         lang == .vietnamese ? "Màn hình lớn" : "Full Screen Alert"
     }
@@ -180,7 +182,7 @@ struct L10n {
         lang == .vietnamese ? "giây" : "sec"
     }
     
-    // MARK: - Break Overlay Screen
+    // MARK: - Break Overlay
     var breakTimeTitle: String {
         lang == .vietnamese ? "NGHỈ NGƠI THÔI!" : "TAKE A BREAK!"
     }
@@ -201,7 +203,7 @@ struct L10n {
         lang == .vietnamese ? "Nhấn ESC để đóng" : "Press ESC to close"
     }
     
-    // MARK: - Auto Reset Settings
+    // MARK: - Auto Reset
     var autoReset: String {
         lang == .vietnamese ? "Tự động reset" : "Auto Reset"
     }
@@ -218,7 +220,7 @@ struct L10n {
         lang == .vietnamese ? "Thời gian nghỉ" : "Break duration"
     }
     
-    // MARK: - Keep Awake Settings
+    // MARK: - Keep Awake
     var keepAwakeTitle: String {
         lang == .vietnamese ? "Giữ màn hình sáng" : "Keep screen awake"
     }
