@@ -523,6 +523,26 @@ struct SettingsScreenView: View {
                         }
                     }
                     
+                    // MARK: - Keep Awake
+                    settingSection {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(l10n.keepAwakeTitle)
+                                    .font(.system(size: 13))
+                                Text(l10n.keepAwakeSubtitle)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Toggle("", isOn: $reminderManager.keepAwake)
+                                .toggleStyle(.switch)
+                                .labelsHidden()
+                                .tint(accentColor)
+                        }
+                    }
+                    
                     // MARK: - Auto Reset
                     settingSection {
                         VStack(spacing: 12) {

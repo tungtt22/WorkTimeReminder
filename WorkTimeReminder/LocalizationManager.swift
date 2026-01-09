@@ -218,6 +218,15 @@ struct L10n {
         lang == .vietnamese ? "Thời gian nghỉ" : "Break duration"
     }
     
+    // MARK: - Keep Awake Settings
+    var keepAwakeTitle: String {
+        lang == .vietnamese ? "Giữ màn hình sáng" : "Keep screen awake"
+    }
+    
+    var keepAwakeSubtitle: String {
+        lang == .vietnamese ? "Ngăn màn hình tự tắt khi đang làm việc" : "Prevent screen from sleeping while working"
+    }
+    
     // MARK: - Notifications
     var notificationTitle: String {
         lang == .vietnamese ? "⏰ Nghỉ ngơi thôi!" : "⏰ Time for a break!"
