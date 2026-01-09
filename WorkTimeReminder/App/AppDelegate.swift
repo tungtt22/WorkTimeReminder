@@ -16,6 +16,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var powerAssertionID: IOPMAssertionID = 0
     var isPowerAssertionActive = false
     
+    // MARK: - Optimization: Cached values
+    private var cachedIcons: [String: NSImage] = [:]
+    private var lastDisplayedTime: String = ""
+    private var lastIconState: IconState = .normal
+    private var lastProgress: Int = 100  // Progress as percentage (0-100)
+    private lazy var timeFont = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+    private var contentViewController: NSHostingController<ContentView>?
+    
     // MARK: - App Lifecycle
     
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -23,10 +31,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
     
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        if shouldTerminate {
-            return .terminateNow
-        }
-        return .terminateCancel
+        return shouldTerminate ? .terminateNow : .terminateCancel
     }
     
     func quitApp() {
@@ -46,11 +51,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     // MARK: - Setup Methods
     
     private func setupNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            if granted {
-                print("Notification permission granted")
-            }
-        }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
         UNUserNotificationCenter.current().delegate = self
     }
     
@@ -65,7 +66,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            button.image = createStatusBarIcon(state: .normal)
+            button.image = getCachedIcon(state: .normal, progress: 100)
             button.imagePosition = .imageLeading
             button.action = #selector(togglePopover)
         }
@@ -75,7 +76,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         popover = NSPopover()
         popover?.contentSize = NSSize(width: 320, height: 420)
         popover?.behavior = .transient
-        popover?.contentViewController = NSHostingController(rootView: ContentView(appDelegate: self))
+        
+        // Create content view controller once
+        contentViewController = NSHostingController(rootView: ContentView(appDelegate: self))
+        popover?.contentViewController = contentViewController
     }
     
     // MARK: - Timer Management
@@ -100,9 +104,98 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     func startDisplayTimer() {
         displayTimer?.invalidate()
+        // Update every second for accurate countdown
         displayTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.updateStatusBarDisplay()
+            self?.updateStatusBarDisplayOptimized()
         }
+    }
+    
+    // MARK: - Optimized Status Bar Update
+    
+    private func updateStatusBarDisplayOptimized() {
+        guard let button = statusItem?.button else { return }
+        
+        // Handle disabled state
+        if !reminderManager.isEnabled {
+            if lastIconState != .paused {
+                button.image = getCachedIcon(state: .paused, progress: 0)
+                button.title = ""
+                lastIconState = .paused
+                lastDisplayedTime = ""
+            }
+            return
+        }
+        
+        // Handle no timer state
+        guard let nextDate = reminderManager.nextReminderDate else {
+            if lastIconState != .normal || lastProgress != 100 {
+                button.image = getCachedIcon(state: .normal, progress: 100)
+                button.title = ""
+                lastIconState = .normal
+                lastProgress = 100
+                lastDisplayedTime = ""
+            }
+            return
+        }
+        
+        let remaining = nextDate.timeIntervalSinceNow
+        let totalInterval = TimeInterval(reminderManager.intervalMinutes * 60)
+        let progressPercent = Int(max(0, min(100, (remaining / totalInterval) * 100)))
+        
+        // Calculate time string
+        let timeString: String
+        let newState: IconState
+        let textColor: NSColor
+        
+        if remaining > 0 {
+            let minutes = Int(remaining) / 60
+            let seconds = Int(remaining) % 60
+            
+            if minutes >= 60 {
+                let hours = minutes / 60
+                let mins = minutes % 60
+                timeString = String(format: " %d:%02d:%02d", hours, mins, seconds)
+            } else {
+                timeString = String(format: " %02d:%02d", minutes, seconds)
+            }
+            
+            if minutes < 1 {
+                newState = .urgent
+                textColor = .systemRed
+            } else if minutes < 5 {
+                newState = .warning
+                textColor = .systemOrange
+            } else {
+                newState = .normal
+                textColor = .labelColor
+            }
+        } else {
+            timeString = " 00:00"
+            newState = .urgent
+            textColor = .systemRed
+        }
+        
+        // Only update icon if state or progress changed significantly (every 5%)
+        let progressBucket = (progressPercent / 5) * 5
+        if newState != lastIconState || progressBucket != (lastProgress / 5) * 5 {
+            button.image = getCachedIcon(state: newState, progress: progressBucket)
+            lastIconState = newState
+            lastProgress = progressPercent
+        }
+        
+        // Only update text if changed
+        if timeString != lastDisplayedTime {
+            button.title = timeString
+            button.attributedTitle = NSAttributedString(
+                string: timeString,
+                attributes: [.font: timeFont, .foregroundColor: textColor]
+            )
+            lastDisplayedTime = timeString
+        }
+    }
+    
+    func updateStatusBarDisplay() {
+        updateStatusBarDisplayOptimized()
     }
     
     // MARK: - Reminder Actions
@@ -156,14 +249,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     // MARK: - Popover
     
     @objc func togglePopover() {
-        if let button = statusItem?.button {
-            if popover?.isShown == true {
-                popover?.performClose(nil)
-            } else {
-                popover?.contentViewController = NSHostingController(rootView: ContentView(appDelegate: self))
-                popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-                popover?.contentViewController?.view.window?.makeKey()
-            }
+        guard let button = statusItem?.button else { return }
+        
+        if popover?.isShown == true {
+            popover?.performClose(nil)
+        } else {
+            // Refresh the view's state without recreating
+            contentViewController?.rootView = ContentView(appDelegate: self)
+            popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover?.contentViewController?.view.window?.makeKey()
         }
     }
     
@@ -174,17 +268,32 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 }
 
-// MARK: - Status Bar Icon
+// MARK: - Status Bar Icon (Optimized with Caching)
 extension AppDelegate {
     
-    enum IconState {
-        case normal
-        case warning
-        case paused
-        case urgent
+    enum IconState: String {
+        case normal, warning, paused, urgent
     }
     
-    func createStatusBarIcon(state: IconState, progress: CGFloat = 1.0) -> NSImage {
+    private func getCachedIcon(state: IconState, progress: Int) -> NSImage {
+        let key = "\(state.rawValue)_\(progress)"
+        
+        if let cached = cachedIcons[key] {
+            return cached
+        }
+        
+        let icon = createStatusBarIcon(state: state, progress: CGFloat(progress) / 100.0)
+        
+        // Limit cache size to prevent memory bloat
+        if cachedIcons.count > 50 {
+            cachedIcons.removeAll()
+        }
+        
+        cachedIcons[key] = icon
+        return icon
+    }
+    
+    private func createStatusBarIcon(state: IconState, progress: CGFloat) -> NSImage {
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size, flipped: false) { rect in
             NSGraphicsContext.current?.cgContext.setShouldAntialias(true)
@@ -203,13 +312,10 @@ extension AppDelegate {
             switch state {
             case .paused:
                 self.drawPausedIcon(bgPath: bgPath, center: center, lineWidth: lineWidth)
-                
             case .warning:
                 self.drawWarningIcon(bgPath: bgPath, center: center, radius: radius, lineWidth: lineWidth, progress: progress)
-                
             case .urgent:
                 self.drawUrgentIcon(bgPath: bgPath, center: center, lineWidth: lineWidth)
-                
             case .normal:
                 self.drawNormalIcon(bgPath: bgPath, center: center, radius: radius, lineWidth: lineWidth, progress: progress)
             }
@@ -324,65 +430,6 @@ extension AppDelegate {
         color.setFill()
         dotPath.fill()
     }
-    
-    func updateStatusBarDisplay() {
-        guard let button = statusItem?.button else { return }
-        
-        if !reminderManager.isEnabled {
-            button.image = createStatusBarIcon(state: .paused)
-            button.title = ""
-            button.contentTintColor = nil
-            return
-        }
-        
-        guard let nextDate = reminderManager.nextReminderDate else {
-            button.image = createStatusBarIcon(state: .normal)
-            button.title = ""
-            button.contentTintColor = nil
-            return
-        }
-        
-        let remaining = nextDate.timeIntervalSinceNow
-        let totalInterval = TimeInterval(reminderManager.intervalMinutes * 60)
-        let progress = CGFloat(max(0, min(1, remaining / totalInterval)))
-        
-        if remaining > 0 {
-            let minutes = Int(remaining) / 60
-            let seconds = Int(remaining) % 60
-            
-            if minutes < 1 {
-                button.image = createStatusBarIcon(state: .urgent, progress: progress)
-            } else if minutes < 5 {
-                button.image = createStatusBarIcon(state: .warning, progress: progress)
-            } else {
-                button.image = createStatusBarIcon(state: .normal, progress: progress)
-            }
-            button.contentTintColor = nil
-            
-            if minutes >= 60 {
-                let hours = minutes / 60
-                let mins = minutes % 60
-                button.title = String(format: " %d:%02d:%02d", hours, mins, seconds)
-            } else {
-                button.title = String(format: " %02d:%02d", minutes, seconds)
-            }
-            
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium),
-                .foregroundColor: minutes < 1 ? NSColor.systemRed : (minutes < 5 ? NSColor.systemOrange : NSColor.labelColor)
-            ]
-            button.attributedTitle = NSAttributedString(string: button.title, attributes: attributes)
-            
-        } else {
-            button.image = createStatusBarIcon(state: .urgent)
-            button.title = " 00:00"
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium),
-                .foregroundColor: NSColor.systemRed
-            ]
-            button.attributedTitle = NSAttributedString(string: button.title, attributes: attributes)
-        }
-    }
 }
 
 // MARK: - Screen Lock Monitoring
@@ -390,55 +437,20 @@ extension AppDelegate {
     
     func setupScreenLockMonitoring() {
         let workspace = NSWorkspace.shared
-        let notificationCenter = workspace.notificationCenter
+        let nc = workspace.notificationCenter
         
-        notificationCenter.addObserver(
-            self,
-            selector: #selector(handleScreenSleep),
-            name: NSWorkspace.screensDidSleepNotification,
-            object: nil
-        )
+        nc.addObserver(self, selector: #selector(handleScreenSleep), name: NSWorkspace.screensDidSleepNotification, object: nil)
+        nc.addObserver(self, selector: #selector(handleScreenWake), name: NSWorkspace.screensDidWakeNotification, object: nil)
+        nc.addObserver(self, selector: #selector(handleScreenSleep), name: NSWorkspace.sessionDidResignActiveNotification, object: nil)
+        nc.addObserver(self, selector: #selector(handleScreenWake), name: NSWorkspace.sessionDidBecomeActiveNotification, object: nil)
         
-        notificationCenter.addObserver(
-            self,
-            selector: #selector(handleScreenWake),
-            name: NSWorkspace.screensDidWakeNotification,
-            object: nil
-        )
-        
-        notificationCenter.addObserver(
-            self,
-            selector: #selector(handleScreenSleep),
-            name: NSWorkspace.sessionDidResignActiveNotification,
-            object: nil
-        )
-        
-        notificationCenter.addObserver(
-            self,
-            selector: #selector(handleScreenWake),
-            name: NSWorkspace.sessionDidBecomeActiveNotification,
-            object: nil
-        )
-        
-        DistributedNotificationCenter.default().addObserver(
-            self,
-            selector: #selector(handleScreenSleep),
-            name: NSNotification.Name("com.apple.screensaver.didstart"),
-            object: nil
-        )
-        
-        DistributedNotificationCenter.default().addObserver(
-            self,
-            selector: #selector(handleScreenWake),
-            name: NSNotification.Name("com.apple.screensaver.didstop"),
-            object: nil
-        )
+        DistributedNotificationCenter.default().addObserver(self, selector: #selector(handleScreenSleep), name: NSNotification.Name("com.apple.screensaver.didstart"), object: nil)
+        DistributedNotificationCenter.default().addObserver(self, selector: #selector(handleScreenWake), name: NSNotification.Name("com.apple.screensaver.didstop"), object: nil)
     }
     
     @objc func handleScreenSleep() {
         if screenLockTime == nil {
             screenLockTime = Date()
-            print("Screen locked/sleep at: \(screenLockTime!)")
         }
     }
     
@@ -448,16 +460,11 @@ extension AppDelegate {
         let awayDuration = Date().timeIntervalSince(lockTime)
         let breakDurationSeconds = TimeInterval(reminderManager.breakDurationMinutes * 60)
         
-        print("Screen wake. Away for: \(Int(awayDuration)) seconds, break duration: \(Int(breakDurationSeconds)) seconds")
-        
         screenLockTime = nil
         
         if reminderManager.autoResetOnScreenLock &&
            reminderManager.isEnabled &&
            awayDuration >= breakDurationSeconds {
-            
-            print("Auto resetting timer - user took a break of \(Int(awayDuration/60)) minutes")
-            
             DispatchQueue.main.async { [weak self] in
                 self?.startTimer()
             }
@@ -465,16 +472,11 @@ extension AppDelegate {
     }
 }
 
-// MARK: - Power Management (Keep Awake)
+// MARK: - Power Management
 extension AppDelegate {
     
     func setupKeepAwakeObserver() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleKeepAwakeChanged),
-            name: .keepAwakeChanged,
-            object: nil
-        )
+        NotificationCenter.default.addObserver(self, selector: #selector(handleKeepAwakeChanged), name: .keepAwakeChanged, object: nil)
     }
     
     @objc func handleKeepAwakeChanged() {
@@ -485,28 +487,18 @@ extension AppDelegate {
         let shouldKeepAwake = reminderManager.keepAwake && reminderManager.isEnabled
         
         if shouldKeepAwake && !isPowerAssertionActive {
-            let reasonForActivity = "Work Time Reminder - Keeping display awake during work session" as CFString
+            let reason = "Work Time Reminder - Keeping display awake" as CFString
             let result = IOPMAssertionCreateWithName(
                 kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
                 IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                reasonForActivity,
+                reason,
                 &powerAssertionID
             )
-            
-            if result == kIOReturnSuccess {
-                isPowerAssertionActive = true
-                print("Power assertion created - display will stay awake")
-            } else {
-                print("Failed to create power assertion")
-            }
+            isPowerAssertionActive = (result == kIOReturnSuccess)
         } else if !shouldKeepAwake && isPowerAssertionActive {
-            let result = IOPMAssertionRelease(powerAssertionID)
-            if result == kIOReturnSuccess {
-                isPowerAssertionActive = false
-                powerAssertionID = 0
-                print("Power assertion released - display can sleep normally")
-            }
+            IOPMAssertionRelease(powerAssertionID)
+            isPowerAssertionActive = false
+            powerAssertionID = 0
         }
     }
 }
-
