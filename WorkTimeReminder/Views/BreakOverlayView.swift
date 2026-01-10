@@ -55,6 +55,11 @@ class BreakOverlayController {
         }
     }
     
+    func snoozeReminder() {
+        hideOverlay()
+        NotificationCenter.default.post(name: .snoozeRequested, object: nil)
+    }
+    
     private func hideOverlayOnMainThread() {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
@@ -111,9 +116,14 @@ class BreakOverlayController {
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = true
         
-        let overlayView = BreakOverlayView(onDismiss: { [weak self] in
-            self?.hideOverlay()
-        })
+        let overlayView = BreakOverlayView(
+            onDismiss: { [weak self] in
+                self?.hideOverlay()
+            },
+            onSnooze: { [weak self] in
+                self?.snoozeReminder()
+            }
+        )
         
         panel.contentView = NSHostingView(rootView: overlayView)
         
@@ -145,9 +155,11 @@ struct BreakOverlayView: View {
     @ObservedObject var localization = LocalizationManager.shared
     @ObservedObject var reminderManager = ReminderManager.shared
     var onDismiss: () -> Void
+    var onSnooze: (() -> Void)?
     
     @State private var animate = false
     @State private var countdown: Int = ReminderManager.shared.overlayDurationSeconds
+    @State private var breakSuggestion: BreakSuggestion = BreakSuggestions.random()
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -164,6 +176,7 @@ struct BreakOverlayView: View {
         .onAppear {
             animate = true
             countdown = ReminderManager.shared.overlayDurationSeconds
+            breakSuggestion = BreakSuggestions.random()
         }
         .onReceive(timer) { _ in
             if countdown > 0 {
@@ -200,11 +213,12 @@ struct BreakOverlayView: View {
     
     // MARK: - Content
     private var contentView: some View {
-        VStack(spacing: 40) {
+        VStack(spacing: 30) {
             iconView
             messageView
+            suggestionView
             countdownView
-            dismissButton
+            buttonsView
             keyboardHint
         }
         .allowsHitTesting(true)
@@ -220,11 +234,11 @@ struct BreakOverlayView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 120, height: 120)
+                .frame(width: 100, height: 100)
                 .shadow(color: primaryColor.opacity(0.5), radius: animate ? 30 : 20)
             
             Image(systemName: "cup.and.saucer.fill")
-                .font(.system(size: 50))
+                .font(.system(size: 40))
                 .foregroundColor(.white)
                 .scaleEffect(animate ? 1.1 : 1.0)
         }
@@ -232,60 +246,119 @@ struct BreakOverlayView: View {
     }
     
     private var messageView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             Text(l10n.breakTimeTitle)
-                .font(.system(size: 72, weight: .bold, design: .rounded))
+                .font(.system(size: 60, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.3), radius: 10)
             
             Text(l10n.breakTimeSubtitle)
-                .font(.system(size: 28, weight: .medium, design: .rounded))
+                .font(.system(size: 24, weight: .medium, design: .rounded))
                 .foregroundColor(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
         }
     }
     
+    // MARK: - Break Suggestion
+    private var suggestionView: some View {
+        HStack(spacing: 16) {
+            Image(systemName: breakSuggestion.icon)
+                .font(.system(size: 28))
+                .foregroundColor(primaryColor)
+                .frame(width: 50, height: 50)
+                .background(
+                    Circle()
+                        .fill(Color.white.opacity(0.1))
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(breakSuggestion.title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Text(breakSuggestion.description)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 40)
+    }
+    
     private var countdownView: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Text(l10n.closingIn)
-                .font(.system(size: 18))
+                .font(.system(size: 16))
                 .foregroundColor(.white.opacity(0.6))
             
             Text("\(countdown)")
-                .font(.system(size: 48, weight: .bold, design: .monospaced))
+                .font(.system(size: 40, weight: .bold, design: .monospaced))
                 .foregroundColor(primaryColor)
         }
-        .padding(.top, 20)
     }
     
-    private var dismissButton: some View {
-        Button(action: onDismiss) {
-            HStack(spacing: 10) {
-                Image(systemName: "xmark.circle.fill")
-                Text(l10n.dismissButton)
-            }
-            .font(.system(size: 20, weight: .semibold))
-            .foregroundColor(.white)
-            .padding(.horizontal, 40)
-            .padding(.vertical, 16)
-            .background(
-                Capsule()
-                    .fill(Color.white.opacity(0.15))
-                    .overlay(
+    // MARK: - Buttons
+    private var buttonsView: some View {
+        HStack(spacing: 20) {
+            // Snooze button
+            if let onSnooze = onSnooze {
+                Button(action: onSnooze) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock.arrow.circlepath")
+                        Text(l10n.snoozeButton(minutes: reminderManager.snoozeDurationMinutes))
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
+                    .background(
                         Capsule()
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                            .fill(primaryColor.opacity(0.3))
+                            .overlay(
+                                Capsule()
+                                    .stroke(primaryColor.opacity(0.5), lineWidth: 1)
+                            )
                     )
-            )
+                }
+                .buttonStyle(.plain)
+            }
+            
+            // Dismiss button
+            Button(action: onDismiss) {
+                HStack(spacing: 8) {
+                    Image(systemName: "xmark.circle.fill")
+                    Text(l10n.dismissButton)
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 14)
+                .background(
+                    Capsule()
+                        .fill(Color.white.opacity(0.15))
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                        )
+                )
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
-        .padding(.top, 20)
     }
     
     private var keyboardHint: some View {
         Text(l10n.pressEscToClose)
-            .font(.system(size: 14))
+            .font(.system(size: 13))
             .foregroundColor(.white.opacity(0.4))
-            .padding(.top, 10)
     }
 }
 
