@@ -23,8 +23,15 @@ struct MainScreenView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
                     statusCard
-                    profileSection
-                    intervalSection
+                    
+                    // Show either profile selector OR manual interval (not both)
+                    if profileManager.currentProfile != nil {
+                        activeProfileCard
+                    } else {
+                        intervalSection
+                    }
+                    
+                    quickActionsSection
                     quickStatsSection
                 }
                 .padding(16)
@@ -205,61 +212,68 @@ struct MainScreenView: View {
         )
     }
     
-    // MARK: - Profile Section
-    private var profileSection: some View {
-        Button(action: { onProfilesTapped?() }) {
-            HStack(spacing: 10) {
-                if let profile = profileManager.currentProfile {
+    // MARK: - Active Profile Card (when profile is selected)
+    private var activeProfileCard: some View {
+        VStack(spacing: 12) {
+            if let profile = profileManager.currentProfile {
+                // Current profile display
+                HStack(spacing: 12) {
                     Image(systemName: profile.icon)
-                        .font(.system(size: 14))
+                        .font(.system(size: 20))
                         .foregroundColor(.white)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 44, height: 44)
                         .background(
                             Circle()
                                 .fill(profileColor(for: profile))
                         )
                     
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(profile.displayName)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.primary)
-                        Text("\(profile.intervalMinutes)\(l10n.minutes) work → \(profile.breakDurationMinutes)\(l10n.minutes) break")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
+                        
+                        HStack(spacing: 12) {
+                            Label("\(profile.intervalMinutes)\(l10n.minutes)", systemImage: "clock")
+                            Label("\(profile.breakDurationMinutes)\(l10n.minutes)", systemImage: "cup.and.saucer")
+                        }
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                     }
-                } else {
-                    Image(systemName: "slider.horizontal.3")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            Circle()
-                                .fill(accentColor)
-                        )
                     
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(l10n.customProfile)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.primary)
-                        Text("\(reminderManager.intervalMinutes)\(l10n.minutes) work interval")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary)
-                    }
+                    Spacer()
                 }
                 
-                Spacer()
+                Divider().opacity(0.3)
                 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                // Quick actions row
+                HStack(spacing: 12) {
+                    // Change profile
+                    Button(action: { onProfilesTapped?() }) {
+                        Label(l10n.selectProfile, systemImage: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Spacer()
+                    
+                    // Switch to custom
+                    Button(action: {
+                        profileManager.clearProfile()
+                    }) {
+                        Text(l10n.customProfile)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
-            )
         }
-        .buttonStyle(.plain)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+        )
     }
     
     private func profileColor(for profile: WorkProfile) -> Color {
@@ -270,6 +284,78 @@ struct MainScreenView: View {
         case "hourglass": return .orange
         default: return accentColor
         }
+    }
+    
+    // MARK: - Quick Actions Section
+    private var quickActionsSection: some View {
+        HStack(spacing: 10) {
+            // Profiles button (only show when in custom mode)
+            if profileManager.currentProfile == nil {
+                quickActionButton(
+                    icon: "list.bullet.rectangle",
+                    title: l10n.profiles,
+                    color: .purple
+                ) {
+                    onProfilesTapped?()
+                }
+            }
+            
+            // Quick profile buttons
+            ForEach(ProfileManager.builtInProfiles.prefix(profileManager.currentProfile == nil ? 3 : 4), id: \.id) { profile in
+                quickProfileButton(profile)
+            }
+        }
+    }
+    
+    private func quickActionButton(icon: String, title: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(color)
+                Text(title)
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private func quickProfileButton(_ profile: WorkProfile) -> some View {
+        let isActive = profileManager.currentProfileId == profile.id
+        let color = profileColor(for: profile)
+        
+        return Button(action: {
+            if isActive {
+                profileManager.clearProfile()
+            } else {
+                profileManager.selectProfile(profile)
+                appDelegate?.startTimer()
+            }
+        }) {
+            VStack(spacing: 4) {
+                Image(systemName: profile.icon)
+                    .font(.system(size: 16))
+                    .foregroundColor(isActive ? .white : color)
+                Text("\(profile.intervalMinutes)m")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(isActive ? .white : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isActive ? color : Color(NSColor.controlBackgroundColor).opacity(0.5))
+            )
+        }
+        .buttonStyle(.plain)
     }
     
     // MARK: - Quick Stats Section

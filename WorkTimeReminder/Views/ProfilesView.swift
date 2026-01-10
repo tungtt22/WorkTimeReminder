@@ -128,6 +128,10 @@ struct ProfilesView: View {
         return Button(action: {
             profileManager.selectProfile(profile)
             appDelegate?.startTimer()
+            // Auto navigate back after selection
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                onBack()
+            }
         }) {
             HStack(spacing: 12) {
                 Image(systemName: profile.icon)
