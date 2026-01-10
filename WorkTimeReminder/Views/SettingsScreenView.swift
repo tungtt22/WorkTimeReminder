@@ -428,14 +428,16 @@ struct SettingsScreenView: View {
                         .foregroundColor(accentColor)
                     Text(l10n.shortcuts)
                         .font(.system(size: 13, weight: .medium))
+                    Spacer()
                 }
                 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(spacing: 6) {
                     shortcutRow(keys: "⌘⇧P", action: l10n.pauseResume)
                     shortcutRow(keys: "⌘⇧S", action: l10n.skipReminder)
                     shortcutRow(keys: "⌘⇧R", action: l10n.resetTimer)
                 }
             }
+            .frame(maxWidth: .infinity)
         }
     }
     
@@ -444,16 +446,19 @@ struct SettingsScreenView: View {
             Text(keys)
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundColor(accentColor)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
                         .fill(accentColor.opacity(0.1))
                 )
+                .frame(width: 60)
             
             Text(action)
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
+            
+            Spacer()
         }
     }
     
