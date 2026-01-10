@@ -11,10 +11,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var timer: Timer?
     var displayTimer: Timer?
     var reminderManager = ReminderManager.shared
+    var statisticsManager = StatisticsManager.shared
+    var workSchedule = WorkSchedule.shared
     var shouldTerminate = false
     var screenLockTime: Date?
     var powerAssertionID: IOPMAssertionID = 0
     var isPowerAssertionActive = false
+    var globalEventMonitor: Any?
+    var isSnoozing = false
     
     // MARK: - Optimization: Cached values
     private var cachedIcons: [String: NSImage] = [:]
@@ -45,6 +49,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         setupTimers()
         setupScreenLockMonitoring()
         setupKeepAwakeObserver()
+        setupKeyboardShortcuts()
+        setupSnoozeObserver()
         updatePowerAssertion()
     }
     
@@ -86,6 +92,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     func startTimer() {
         stopTimer()
+        isSnoozing = false
+        statisticsManager.startSession()
+        
         let interval = TimeInterval(reminderManager.intervalMinutes * 60)
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             self?.triggerReminder()
@@ -95,11 +104,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
     
     func stopTimer() {
+        if timer != nil && !isSnoozing {
+            statisticsManager.endSession(wasCompleted: false)
+        }
         timer?.invalidate()
         timer = nil
         reminderManager.nextReminderDate = nil
         updateStatusBarDisplay()
         updatePowerAssertion()
+    }
+    
+    func snoozeTimer() {
+        isSnoozing = true
+        timer?.invalidate()
+        timer = nil
+        
+        let snoozeInterval = TimeInterval(reminderManager.snoozeDurationMinutes * 60)
+        timer = Timer.scheduledTimer(withTimeInterval: snoozeInterval, repeats: false) { [weak self] _ in
+            self?.isSnoozing = false
+            self?.triggerReminder()
+        }
+        reminderManager.nextReminderDate = Date().addingTimeInterval(snoozeInterval)
+    }
+    
+    func skipReminder() {
+        // Skip current reminder and start fresh
+        statisticsManager.endSession(wasCompleted: false)
+        startTimer()
     }
     
     func startDisplayTimer() {
@@ -201,6 +232,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     // MARK: - Reminder Actions
     
     func triggerReminder() {
+        // Check work schedule
+        if !workSchedule.isWithinWorkHours() {
+            // Outside work hours, just reset timer silently
+            let interval = TimeInterval(reminderManager.intervalMinutes * 60)
+            reminderManager.nextReminderDate = Date().addingTimeInterval(interval)
+            return
+        }
+        
+        // Record completed session
+        statisticsManager.endSession(wasCompleted: true)
+        
         sendNotification()
         
         if reminderManager.enableOverlay {
@@ -211,6 +253,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             activateScreenSaver()
         }
         
+        // Start new session
+        statisticsManager.startSession()
         let interval = TimeInterval(reminderManager.intervalMinutes * 60)
         reminderManager.nextReminderDate = Date().addingTimeInterval(interval)
     }
@@ -500,5 +544,61 @@ extension AppDelegate {
             isPowerAssertionActive = false
             powerAssertionID = 0
         }
+    }
+}
+
+// MARK: - Keyboard Shortcuts
+extension AppDelegate {
+    
+    func setupKeyboardShortcuts() {
+        // Global keyboard shortcuts: ⌘+Shift+P (toggle), ⌘+Shift+S (skip), ⌘+Shift+R (reset)
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.modifierFlags.contains([.command, .shift]) else { return }
+            
+            switch event.keyCode {
+            case 35:  // P key - Pause/Resume
+                DispatchQueue.main.async {
+                    self?.toggleTimer()
+                }
+            case 1:   // S key - Skip
+                DispatchQueue.main.async {
+                    self?.skipReminder()
+                }
+            case 15:  // R key - Reset
+                DispatchQueue.main.async {
+                    if self?.reminderManager.isEnabled == true {
+                        self?.startTimer()
+                    }
+                }
+            default:
+                break
+            }
+        }
+    }
+    
+    func toggleTimer() {
+        reminderManager.isEnabled.toggle()
+        if reminderManager.isEnabled {
+            startTimer()
+        } else {
+            stopTimer()
+        }
+    }
+}
+
+// MARK: - Snooze Support
+extension AppDelegate {
+    
+    func setupSnoozeObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleSnoozeRequested),
+            name: .snoozeRequested,
+            object: nil
+        )
+    }
+    
+    @objc func handleSnoozeRequested() {
+        snoozeTimer()
     }
 }
