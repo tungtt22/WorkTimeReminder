@@ -241,5 +241,118 @@ struct L10n {
             return "You've been working for \(minutes) minutes. Take a break and rest your eyes!"
         }
     }
+    
+    // MARK: - Snooze
+    func snoozeButton(minutes: Int) -> String {
+        lang == .vietnamese ? "Hoãn \(minutes) phút" : "Snooze \(minutes)m"
+    }
+    
+    var snoozeDuration: String {
+        lang == .vietnamese ? "Thời gian hoãn" : "Snooze duration"
+    }
+    
+    // MARK: - Statistics
+    var statistics: String {
+        lang == .vietnamese ? "Thống kê" : "Statistics"
+    }
+    
+    var todayStats: String {
+        lang == .vietnamese ? "Hôm nay" : "Today"
+    }
+    
+    var weekStats: String {
+        lang == .vietnamese ? "Tuần này" : "This Week"
+    }
+    
+    var sessions: String {
+        lang == .vietnamese ? "Phiên" : "Sessions"
+    }
+    
+    var workTime: String {
+        lang == .vietnamese ? "Thời gian làm việc" : "Work time"
+    }
+    
+    var breaksCompleted: String {
+        lang == .vietnamese ? "Lần nghỉ" : "Breaks"
+    }
+    
+    var avgSession: String {
+        lang == .vietnamese ? "TB mỗi phiên" : "Avg session"
+    }
+    
+    var longestStreak: String {
+        lang == .vietnamese ? "Chuỗi dài nhất" : "Longest streak"
+    }
+    
+    var days: String {
+        lang == .vietnamese ? "ngày" : "days"
+    }
+    
+    var hours: String {
+        lang == .vietnamese ? "giờ" : "h"
+    }
+    
+    var resetStats: String {
+        lang == .vietnamese ? "Xóa thống kê" : "Reset statistics"
+    }
+    
+    // MARK: - Work Schedule
+    var schedule: String {
+        lang == .vietnamese ? "Lịch làm việc" : "Work Schedule"
+    }
+    
+    var scheduleTitle: String {
+        lang == .vietnamese ? "Lịch làm việc" : "Work Schedule"
+    }
+    
+    var scheduleSubtitle: String {
+        lang == .vietnamese ? "Chỉ nhắc nhở trong giờ làm việc" : "Only remind during work hours"
+    }
+    
+    var workHours: String {
+        lang == .vietnamese ? "Giờ làm việc" : "Work hours"
+    }
+    
+    var workDays: String {
+        lang == .vietnamese ? "Ngày làm việc" : "Work days"
+    }
+    
+    var to: String {
+        lang == .vietnamese ? "đến" : "to"
+    }
+    
+    // MARK: - Profiles
+    var profiles: String {
+        lang == .vietnamese ? "Chế độ làm việc" : "Work Profiles"
+    }
+    
+    var selectProfile: String {
+        lang == .vietnamese ? "Chọn chế độ" : "Select profile"
+    }
+    
+    var customProfile: String {
+        lang == .vietnamese ? "Tùy chỉnh" : "Custom"
+    }
+    
+    var currentProfile: String {
+        lang == .vietnamese ? "Chế độ hiện tại" : "Current profile"
+    }
+    
+    // MARK: - Keyboard Shortcuts
+    var shortcuts: String {
+        lang == .vietnamese ? "Phím tắt" : "Shortcuts"
+    }
+    
+    var pauseResume: String {
+        lang == .vietnamese ? "Tạm dừng/Tiếp tục" : "Pause/Resume"
+    }
+    
+    var skipReminder: String {
+        lang == .vietnamese ? "Bỏ qua nhắc nhở" : "Skip reminder"
+    }
+    
+    var resetTimer: String {
+        lang == .vietnamese ? "Reset timer" : "Reset timer"
+    }
 }
 
