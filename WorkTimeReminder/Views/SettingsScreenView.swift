@@ -4,8 +4,10 @@ import SwiftUI
 struct SettingsScreenView: View {
     @ObservedObject var reminderManager = ReminderManager.shared
     @ObservedObject var localization = LocalizationManager.shared
+    @ObservedObject var schedule = WorkSchedule.shared
     weak var appDelegate: AppDelegate?
     var onBackTapped: () -> Void
+    var onScheduleTapped: (() -> Void)?
     
     private var l10n: L10n { L10n.shared }
     private let accentColor = Color(red: 0.4, green: 0.6, blue: 0.8)
@@ -18,11 +20,14 @@ struct SettingsScreenView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
                     languageSection
+                    scheduleSection
                     overlaySection
+                    snoozeSection
                     soundSection
                     screenSaverSection
                     keepAwakeSection
                     autoResetSection
+                    shortcutsInfo
                     testButton
                     versionLabel
                 }
@@ -91,6 +96,80 @@ struct SettingsScreenView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 160)
+            }
+        }
+    }
+    
+    // MARK: - Schedule Section
+    private var scheduleSection: some View {
+        Button(action: { onScheduleTapped?() }) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(l10n.scheduleTitle)
+                        .font(.system(size: 13))
+                        .foregroundColor(.primary)
+                    
+                    if schedule.isScheduleEnabled {
+                        Text("\(schedule.startTimeString) - \(schedule.endTimeString)")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text(l10n.scheduleSubtitle)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+                
+                if schedule.isScheduleEnabled {
+                    Text("ON")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.green))
+                }
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // MARK: - Snooze Section
+    private var snoozeSection: some View {
+        settingSection {
+            HStack {
+                Text(l10n.snoozeDuration)
+                    .font(.system(size: 13))
+                
+                Spacer()
+                
+                HStack(spacing: 12) {
+                    stepperButton(systemName: "minus") {
+                        if reminderManager.snoozeDurationMinutes > 1 {
+                            reminderManager.snoozeDurationMinutes -= 1
+                        }
+                    }
+                    
+                    Text("\(reminderManager.snoozeDurationMinutes) \(l10n.minutes)")
+                        .font(.system(size: 14, weight: .medium, design: .monospaced))
+                        .frame(width: 60)
+                    
+                    stepperButton(systemName: "plus") {
+                        if reminderManager.snoozeDurationMinutes < 30 {
+                            reminderManager.snoozeDurationMinutes += 1
+                        }
+                    }
+                }
             }
         }
     }
@@ -340,9 +419,47 @@ struct SettingsScreenView: View {
         .buttonStyle(.plain)
     }
     
+    // MARK: - Shortcuts Info
+    private var shortcutsInfo: some View {
+        settingSection {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "keyboard")
+                        .foregroundColor(accentColor)
+                    Text(l10n.shortcuts)
+                        .font(.system(size: 13, weight: .medium))
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    shortcutRow(keys: "⌘⇧P", action: l10n.pauseResume)
+                    shortcutRow(keys: "⌘⇧S", action: l10n.skipReminder)
+                    shortcutRow(keys: "⌘⇧R", action: l10n.resetTimer)
+                }
+            }
+        }
+    }
+    
+    private func shortcutRow(keys: String, action: String) -> some View {
+        HStack {
+            Text(keys)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundColor(accentColor)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(accentColor.opacity(0.1))
+                )
+            
+            Text(action)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+        }
+    }
+    
     // MARK: - Version Label
     private var versionLabel: some View {
-        Text("v1.0.0")
+        Text("v1.1.0")
             .font(.system(size: 10))
             .foregroundColor(.secondary.opacity(0.6))
             .padding(.top, 4)
