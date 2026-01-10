@@ -19,15 +19,19 @@ struct SettingsScreenView: View {
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
+                    // Basic settings
                     languageSection
                     scheduleSection
-                    overlaySection
-                    snoozeSection
-                    soundSection
-                    screenSaverSection
-                    keepAwakeSection
-                    autoResetSection
+                    
+                    // Notification settings (grouped)
+                    notificationSettingsSection
+                    
+                    // Power & behavior settings (grouped)
+                    behaviorSettingsSection
+                    
+                    // Info section
                     shortcutsInfo
+                    
                     testButton
                     versionLabel
                 }
@@ -144,256 +148,241 @@ struct SettingsScreenView: View {
         .buttonStyle(.plain)
     }
     
-    // MARK: - Snooze Section
-    private var snoozeSection: some View {
+    // MARK: - Notification Settings (Grouped)
+    private var notificationSettingsSection: some View {
         settingSection {
-            HStack {
-                Text(l10n.snoozeDuration)
-                    .font(.system(size: 13))
-                
-                Spacer()
-                
-                HStack(spacing: 12) {
-                    stepperButton(systemName: "minus") {
-                        if reminderManager.snoozeDurationMinutes > 1 {
-                            reminderManager.snoozeDurationMinutes -= 1
-                        }
-                    }
-                    
-                    Text("\(reminderManager.snoozeDurationMinutes) \(l10n.minutes)")
-                        .font(.system(size: 14, weight: .medium, design: .monospaced))
-                        .frame(width: 60)
-                    
-                    stepperButton(systemName: "plus") {
-                        if reminderManager.snoozeDurationMinutes < 30 {
-                            reminderManager.snoozeDurationMinutes += 1
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Overlay Section
-    private var overlaySection: some View {
-        settingSection {
-            VStack(spacing: 12) {
+            VStack(spacing: 0) {
+                // Section header
                 HStack {
-                    Text(l10n.overlay)
-                        .font(.system(size: 13))
+                    Image(systemName: "bell.badge")
+                        .foregroundColor(accentColor)
+                    Text(LocalizationManager.shared.currentLanguage == .vietnamese ? "Thông báo" : "Notifications")
+                        .font(.system(size: 13, weight: .medium))
                     Spacer()
-                    Toggle("", isOn: $reminderManager.enableOverlay)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                        .tint(accentColor)
+                }
+                .padding(.bottom, 12)
+                
+                Divider().opacity(0.3)
+                
+                // Full screen overlay
+                VStack(spacing: 10) {
+                    HStack {
+                        Text(l10n.overlay)
+                            .font(.system(size: 12))
+                        Spacer()
+                        Toggle("", isOn: $reminderManager.enableOverlay)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                            .tint(accentColor)
+                            .scaleEffect(0.85)
+                    }
+                    .padding(.top, 10)
+                    
+                    if reminderManager.enableOverlay {
+                        // Overlay duration
+                        HStack {
+                            Text(l10n.overlayDuration)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            compactStepper(
+                                value: $reminderManager.overlayDurationSeconds,
+                                range: 5...300,
+                                step: 5,
+                                suffix: "s"
+                            )
+                        }
+                        
+                        // Snooze duration
+                        HStack {
+                            Text(l10n.snoozeDuration)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            compactStepper(
+                                value: $reminderManager.snoozeDurationMinutes,
+                                range: 1...30,
+                                step: 1,
+                                suffix: l10n.minutes
+                            )
+                        }
+                        
+                        // Color picker
+                        HStack {
+                            Text(l10n.overlayColorLabel)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            HStack(spacing: 5) {
+                                ForEach(OverlayColor.allCases, id: \.self) { color in
+                                    Button(action: { reminderManager.overlayColor = color }) {
+                                        Circle()
+                                            .fill(color.primaryColor)
+                                            .frame(width: 20, height: 20)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: reminderManager.overlayColor == color ? 2 : 0)
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
                 }
                 
-                if reminderManager.enableOverlay {
-                    Divider().opacity(0.3)
-                    
-                    // Duration control
-                    HStack {
-                        Text(l10n.overlayDuration)
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        HStack(spacing: 12) {
-                            stepperButton(systemName: "minus") {
-                                if reminderManager.overlayDurationSeconds > 5 {
-                                    reminderManager.overlayDurationSeconds -= 5
-                                }
-                            }
-                            
-                            Text("\(reminderManager.overlayDurationSeconds)s")
-                                .font(.system(size: 14, weight: .medium, design: .monospaced))
-                                .frame(width: 50)
-                            
-                            stepperButton(systemName: "plus") {
-                                if reminderManager.overlayDurationSeconds < 300 {
-                                    reminderManager.overlayDurationSeconds += 5
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Color picker
-                    HStack {
-                        Text(l10n.overlayColorLabel)
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        HStack(spacing: 6) {
-                            ForEach(OverlayColor.allCases, id: \.self) { color in
-                                Button(action: {
-                                    reminderManager.overlayColor = color
-                                }) {
-                                    Circle()
-                                        .fill(color.primaryColor)
-                                        .frame(width: 22, height: 22)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(Color.white, lineWidth: reminderManager.overlayColor == color ? 2 : 0)
-                                        )
-                                        .shadow(color: color.primaryColor.opacity(0.5),
-                                                radius: reminderManager.overlayColor == color ? 3 : 0)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                    
-                    // Preview
-                    Button(action: {
-                        BreakOverlayController.shared.showOverlay()
-                    }) {
-                        Text(l10n.previewSound)
-                            .font(.system(size: 12))
-                            .foregroundColor(accentColor)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-    
-    // MARK: - Sound Section
-    private var soundSection: some View {
-        settingSection {
-            VStack(spacing: 12) {
+                Divider().opacity(0.3).padding(.vertical, 8)
+                
+                // Sound
                 HStack {
                     Text(l10n.sound)
-                        .font(.system(size: 13))
+                        .font(.system(size: 12))
                     Spacer()
-                    Toggle("", isOn: $reminderManager.enableSound)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                        .tint(accentColor)
-                }
-                
-                if reminderManager.enableSound {
-                    Divider().opacity(0.3)
                     
-                    HStack {
-                        Text(l10n.selectSound)
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
+                    if reminderManager.enableSound {
                         Picker("", selection: $reminderManager.notificationSound) {
                             ForEach(NotificationSound.allCases, id: \.self) { sound in
                                 Text(sound.displayName).tag(sound)
                             }
                         }
                         .pickerStyle(.menu)
+                        .frame(width: 100)
                         .onChange(of: reminderManager.notificationSound) { newSound in
                             reminderManager.playSound(newSound)
                         }
                     }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Screen Saver Section
-    private var screenSaverSection: some View {
-        settingSection {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(l10n.screenSaverTitle)
-                        .font(.system(size: 13))
-                    Text(l10n.screenSaverSubtitle)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Toggle("", isOn: $reminderManager.enableScreenSaver)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                    .tint(accentColor)
-            }
-        }
-    }
-    
-    // MARK: - Keep Awake Section
-    private var keepAwakeSection: some View {
-        settingSection {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(l10n.keepAwakeTitle)
-                        .font(.system(size: 13))
-                    Text(l10n.keepAwakeSubtitle)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Toggle("", isOn: $reminderManager.keepAwake)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                    .tint(accentColor)
-            }
-        }
-    }
-    
-    // MARK: - Auto Reset Section
-    private var autoResetSection: some View {
-        settingSection {
-            VStack(spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(l10n.autoResetTitle)
-                            .font(.system(size: 13))
-                        Text(l10n.autoResetSubtitle)
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
                     
-                    Spacer()
-                    
-                    Toggle("", isOn: $reminderManager.autoResetOnScreenLock)
+                    Toggle("", isOn: $reminderManager.enableSound)
                         .toggleStyle(.switch)
                         .labelsHidden()
                         .tint(accentColor)
+                        .scaleEffect(0.85)
                 }
                 
-                if reminderManager.autoResetOnScreenLock {
-                    Divider().opacity(0.3)
-                    
+                Divider().opacity(0.3).padding(.vertical, 8)
+                
+                // Screen saver
+                HStack {
+                    Text(l10n.screenSaverTitle)
+                        .font(.system(size: 12))
+                    Spacer()
+                    Toggle("", isOn: $reminderManager.enableScreenSaver)
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .tint(accentColor)
+                        .scaleEffect(0.85)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Behavior Settings (Grouped)
+    private var behaviorSettingsSection: some View {
+        settingSection {
+            VStack(spacing: 0) {
+                // Section header
+                HStack {
+                    Image(systemName: "gearshape.2")
+                        .foregroundColor(accentColor)
+                    Text(LocalizationManager.shared.currentLanguage == .vietnamese ? "Hành vi" : "Behavior")
+                        .font(.system(size: 13, weight: .medium))
+                    Spacer()
+                }
+                .padding(.bottom, 12)
+                
+                Divider().opacity(0.3)
+                
+                // Keep awake
+                VStack(spacing: 8) {
                     HStack {
-                        Text(l10n.breakDuration)
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                        
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(l10n.keepAwakeTitle)
+                                .font(.system(size: 12))
+                            Text(l10n.keepAwakeSubtitle)
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
                         Spacer()
-                        
-                        HStack(spacing: 12) {
-                            stepperButton(systemName: "minus") {
-                                if reminderManager.breakDurationMinutes > 1 {
-                                    reminderManager.breakDurationMinutes -= 1
-                                }
-                            }
-                            
-                            Text("\(reminderManager.breakDurationMinutes) \(l10n.minutes)")
-                                .font(.system(size: 14, weight: .medium, design: .monospaced))
-                                .frame(width: 60)
-                            
-                            stepperButton(systemName: "plus") {
-                                if reminderManager.breakDurationMinutes < 30 {
-                                    reminderManager.breakDurationMinutes += 1
-                                }
-                            }
+                        Toggle("", isOn: $reminderManager.keepAwake)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                            .tint(accentColor)
+                            .scaleEffect(0.85)
+                    }
+                    .padding(.top, 10)
+                }
+                
+                Divider().opacity(0.3).padding(.vertical, 8)
+                
+                // Auto reset
+                VStack(spacing: 8) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(l10n.autoResetTitle)
+                                .font(.system(size: 12))
+                            Text(l10n.autoResetSubtitle)
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Toggle("", isOn: $reminderManager.autoResetOnScreenLock)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                            .tint(accentColor)
+                            .scaleEffect(0.85)
+                    }
+                    
+                    if reminderManager.autoResetOnScreenLock {
+                        HStack {
+                            Text(l10n.breakDuration)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            compactStepper(
+                                value: $reminderManager.breakDurationMinutes,
+                                range: 1...30,
+                                step: 1,
+                                suffix: l10n.minutes
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+    
+    // MARK: - Compact Stepper Helper
+    private func compactStepper(value: Binding<Int>, range: ClosedRange<Int>, step: Int, suffix: String) -> some View {
+        HStack(spacing: 8) {
+            Button(action: {
+                if value.wrappedValue > range.lowerBound {
+                    value.wrappedValue -= step
+                }
+            }) {
+                Image(systemName: "minus")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(accentColor)
+                    .frame(width: 22, height: 22)
+                    .background(Circle().fill(accentColor.opacity(0.1)))
+            }
+            .buttonStyle(.plain)
+            
+            Text("\(value.wrappedValue)\(suffix)")
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .frame(width: 50)
+            
+            Button(action: {
+                if value.wrappedValue < range.upperBound {
+                    value.wrappedValue += step
+                }
+            }) {
+                Image(systemName: "plus")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(accentColor)
+                    .frame(width: 22, height: 22)
+                    .background(Circle().fill(accentColor.opacity(0.1)))
+            }
+            .buttonStyle(.plain)
         }
     }
     
