@@ -39,6 +39,12 @@ class ReminderManager: ObservableObject {
         }
     }
     
+    @Published var snoozeDurationMinutes: Int {
+        didSet {
+            UserDefaults.standard.set(snoozeDurationMinutes, forKey: "snoozeDurationMinutes")
+        }
+    }
+    
     // MARK: - Screen Settings
     
     @Published var enableScreenSaver: Bool {
@@ -106,6 +112,7 @@ class ReminderManager: ObservableObject {
         self.overlayDurationSeconds = UserDefaults.standard.object(forKey: "overlayDurationSeconds") as? Int ?? 10
         self.autoResetOnScreenLock = UserDefaults.standard.object(forKey: "autoResetOnScreenLock") as? Bool ?? true
         self.keepAwake = UserDefaults.standard.object(forKey: "keepAwake") as? Bool ?? false
+        self.snoozeDurationMinutes = UserDefaults.standard.object(forKey: "snoozeDurationMinutes") as? Int ?? 5
         
         let soundRaw = UserDefaults.standard.string(forKey: "notificationSound") ?? "default"
         self.notificationSound = NotificationSound(rawValue: soundRaw) ?? .default
