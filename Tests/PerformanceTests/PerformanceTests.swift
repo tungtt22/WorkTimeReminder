@@ -3,6 +3,7 @@ import XCTest
 
 /// Performance tests for WorkTimeReminder app
 /// These tests ensure the app remains lightweight and efficient
+/// Updated for v1.2.0 with new features: Statistics, Profiles, Schedule, Snooze
 final class PerformanceTests: XCTestCase {
     
     // MARK: - Properties
@@ -162,6 +163,121 @@ final class PerformanceTests: XCTestCase {
         }
     }
     
+    // MARK: - New Feature Tests (v1.2.0)
+    
+    /// Test Statistics tracking performance
+    func testStatisticsTrackingPerformance() {
+        let iterations = 1000
+        let startTime = Date()
+        let startMemory = getMemoryUsage()
+        
+        for i in 0..<iterations {
+            simulateStatisticsOperation(iteration: i)
+        }
+        
+        let duration = Date().timeIntervalSince(startTime)
+        let endMemory = getMemoryUsage()
+        let memoryIncreaseMB = Double(endMemory - startMemory) / 1024 / 1024
+        
+        print("📊 Statistics Tracking Performance (\(iterations) operations):")
+        print("   Duration: \(String(format: "%.3f", duration)) seconds")
+        print("   Memory increase: \(String(format: "%.2f", memoryIncreaseMB)) MB")
+        print("   Ops per second: \(String(format: "%.0f", Double(iterations) / duration))")
+        
+        XCTAssertLessThan(duration, 2.0, "1000 statistics operations should complete in under 2 seconds")
+        XCTAssertLessThan(memoryIncreaseMB, 5, "Statistics should not increase memory by more than 5MB")
+    }
+    
+    /// Test Profile switching performance
+    func testProfileSwitchingPerformance() {
+        let iterations = 100
+        let startTime = Date()
+        
+        for _ in 0..<iterations {
+            simulateProfileSwitch()
+        }
+        
+        let duration = Date().timeIntervalSince(startTime)
+        let avgSwitchMs = (duration / Double(iterations)) * 1000
+        
+        print("📊 Profile Switching Performance:")
+        print("   \(iterations) switches in \(String(format: "%.3f", duration)) seconds")
+        print("   Average switch time: \(String(format: "%.2f", avgSwitchMs)) ms")
+        
+        XCTAssertLessThan(avgSwitchMs, 10, "Profile switch should take less than 10ms")
+    }
+    
+    /// Test Work Schedule check performance
+    func testScheduleCheckPerformance() {
+        let iterations = 10000
+        let startTime = Date()
+        
+        for _ in 0..<iterations {
+            _ = simulateScheduleCheck()
+        }
+        
+        let duration = Date().timeIntervalSince(startTime)
+        let opsPerSecond = Double(iterations) / duration
+        
+        print("📊 Schedule Check Performance:")
+        print("   \(iterations) checks in \(String(format: "%.3f", duration)) seconds")
+        print("   \(String(format: "%.0f", opsPerSecond)) checks per second")
+        
+        XCTAssertGreaterThan(opsPerSecond, 50000, "Should handle at least 50,000 schedule checks per second")
+    }
+    
+    /// Test Break Suggestions random selection performance
+    func testBreakSuggestionsPerformance() {
+        let iterations = 1000
+        let startTime = Date()
+        
+        for _ in 0..<iterations {
+            _ = simulateBreakSuggestionSelection()
+        }
+        
+        let duration = Date().timeIntervalSince(startTime)
+        
+        print("📊 Break Suggestions Performance:")
+        print("   \(iterations) selections in \(String(format: "%.3f", duration)) seconds")
+        
+        XCTAssertLessThan(duration, 0.5, "1000 suggestion selections should complete in under 0.5 seconds")
+    }
+    
+    /// Test Snooze timer handling
+    func testSnoozeTimerPerformance() {
+        let iterations = 100
+        let startTime = Date()
+        
+        for _ in 0..<iterations {
+            simulateSnoozeOperation()
+        }
+        
+        let duration = Date().timeIntervalSince(startTime)
+        
+        print("📊 Snooze Operations Performance:")
+        print("   \(iterations) snooze cycles in \(String(format: "%.3f", duration)) seconds")
+        
+        XCTAssertLessThan(duration, 1.0, "100 snooze operations should complete in under 1 second")
+    }
+    
+    /// Test keyboard shortcuts handling simulation
+    func testKeyboardShortcutPerformance() {
+        let iterations = 1000
+        let startTime = Date()
+        
+        for _ in 0..<iterations {
+            simulateKeyboardShortcut()
+        }
+        
+        let duration = Date().timeIntervalSince(startTime)
+        let avgResponseMs = (duration / Double(iterations)) * 1000
+        
+        print("📊 Keyboard Shortcut Response:")
+        print("   Average response: \(String(format: "%.3f", avgResponseMs)) ms")
+        
+        XCTAssertLessThan(avgResponseMs, 1, "Shortcut response should be under 1ms")
+    }
+    
     // MARK: - Integration Performance Tests
     
     /// Test full reminder cycle performance
@@ -185,6 +301,45 @@ final class PerformanceTests: XCTestCase {
         
         XCTAssertLessThan(duration, 5.0, "100 reminder cycles should complete in under 5 seconds")
         XCTAssertLessThan(memoryIncreaseMB, 10, "Memory should not increase by more than 10MB after 100 cycles")
+    }
+    
+    /// Test full app workflow simulation
+    func testFullWorkflowPerformance() {
+        let startMemory = getMemoryUsage()
+        let startTime = Date()
+        
+        // Simulate a typical work session
+        for session in 0..<10 {
+            // Start session
+            simulateProfileSwitch()
+            
+            // Timer operations
+            for _ in 0..<50 {
+                simulateTimerTick()
+            }
+            
+            // Trigger reminder
+            simulateReminderCycle()
+            
+            // Record statistics
+            simulateStatisticsOperation(iteration: session)
+            
+            // Maybe snooze
+            if session % 3 == 0 {
+                simulateSnoozeOperation()
+            }
+        }
+        
+        let duration = Date().timeIntervalSince(startTime)
+        let endMemory = getMemoryUsage()
+        let memoryIncreaseMB = Double(endMemory - startMemory) / 1024 / 1024
+        
+        print("📊 Full Workflow Performance (10 sessions):")
+        print("   Duration: \(String(format: "%.2f", duration)) seconds")
+        print("   Memory increase: \(String(format: "%.2f", memoryIncreaseMB)) MB")
+        
+        XCTAssertLessThan(duration, 10.0, "10 full sessions should complete in under 10 seconds")
+        XCTAssertLessThan(memoryIncreaseMB, 20, "Memory should not increase by more than 20MB")
     }
     
     // MARK: - Stress Tests
@@ -229,6 +384,23 @@ final class PerformanceTests: XCTestCase {
         }
         
         XCTAssertLessThan(duration, 1.0, "1000 UserDefaults read/write cycles should complete in under 1 second")
+    }
+    
+    /// Stress test JSON encoding/decoding for statistics persistence
+    func testJSONPerformance() {
+        let iterations = 100
+        let startTime = Date()
+        
+        for _ in 0..<iterations {
+            simulateStatisticsPersistence()
+        }
+        
+        let duration = Date().timeIntervalSince(startTime)
+        
+        print("📊 JSON Encoding/Decoding Performance:")
+        print("   \(iterations) save/load cycles in \(String(format: "%.3f", duration)) seconds")
+        
+        XCTAssertLessThan(duration, 1.0, "100 JSON operations should complete in under 1 second")
     }
     
     // MARK: - Helper Methods
@@ -305,6 +477,9 @@ final class PerformanceTests: XCTestCase {
         for _ in 0..<10 {
             animate.toggle()
         }
+        
+        // Simulate break suggestion selection
+        _ = simulateBreakSuggestionSelection()
     }
     
     private func simulateTimerTick() {
@@ -334,7 +509,9 @@ final class PerformanceTests: XCTestCase {
             isVietnamese ? "Nhắc nhở nghỉ ngơi" : "Break Reminder",
             isVietnamese ? "Đang hoạt động" : "Active",
             isVietnamese ? "Cài đặt" : "Settings",
-            isVietnamese ? "NGHỈ NGƠI THÔI!" : "TAKE A BREAK!"
+            isVietnamese ? "NGHỈ NGƠI THÔI!" : "TAKE A BREAK!",
+            isVietnamese ? "Hoãn 5 phút" : "Snooze 5m",
+            isVietnamese ? "Thống kê" : "Statistics"
         ]
     }
     
@@ -350,6 +527,9 @@ final class PerformanceTests: XCTestCase {
         
         // Simulate state update
         UserDefaults.standard.set(Date(), forKey: "lastReminder")
+        
+        // Simulate statistics recording
+        simulateStatisticsOperation(iteration: 0)
     }
     
     private func simulateStateChange() {
@@ -363,6 +543,119 @@ final class PerformanceTests: XCTestCase {
         
         // Update date
         _ = Date()
+    }
+    
+    // MARK: - New Feature Simulations
+    
+    private func simulateStatisticsOperation(iteration: Int) {
+        // Simulate creating a work session
+        let session: [String: Any] = [
+            "id": UUID().uuidString,
+            "startTime": Date().timeIntervalSince1970 - Double(iteration * 1500),
+            "endTime": Date().timeIntervalSince1970,
+            "durationMinutes": 25,
+            "wasCompleted": true
+        ]
+        
+        // Simulate calculations
+        let sessions = Array(repeating: session, count: min(iteration + 1, 100))
+        _ = sessions.count
+        _ = sessions.reduce(0) { $0 + ($1["durationMinutes"] as? Int ?? 0) }
+    }
+    
+    private func simulateProfileSwitch() {
+        // Simulate profile data
+        let profiles = [
+            ("Pomodoro", 25, 5),
+            ("Deep Work", 50, 10),
+            ("Light Work", 15, 3),
+            ("Long Session", 90, 15)
+        ]
+        
+        let selected = profiles.randomElement()!
+        
+        // Simulate applying profile
+        UserDefaults.standard.set(selected.1, forKey: "tempInterval")
+        UserDefaults.standard.set(selected.2, forKey: "tempBreak")
+        UserDefaults.standard.removeObject(forKey: "tempInterval")
+        UserDefaults.standard.removeObject(forKey: "tempBreak")
+    }
+    
+    private func simulateScheduleCheck() -> Bool {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        let weekday = calendar.component(.weekday, from: now)
+        let hour = calendar.component(.hour, from: now)
+        let minute = calendar.component(.minute, from: now)
+        
+        let workDays = Set([2, 3, 4, 5, 6])
+        let startHour = 8
+        let endHour = 18
+        
+        let isWorkDay = workDays.contains(weekday)
+        let currentMinutes = hour * 60 + minute
+        let isWorkHours = currentMinutes >= startHour * 60 && currentMinutes < endHour * 60
+        
+        return isWorkDay && isWorkHours
+    }
+    
+    private func simulateBreakSuggestionSelection() -> (String, String) {
+        let suggestions = [
+            ("eye", "20-20-20 Rule"),
+            ("figure.arms.open", "Shoulder Stretch"),
+            ("wind", "Deep Breathing"),
+            ("drop", "Hydrate"),
+            ("figure.walk", "Take a Walk")
+        ]
+        
+        return suggestions.randomElement()!
+    }
+    
+    private func simulateSnoozeOperation() {
+        let snoozeDuration = 5
+        let snoozeEnd = Date().addingTimeInterval(TimeInterval(snoozeDuration * 60))
+        _ = snoozeEnd.timeIntervalSinceNow
+        
+        // Simulate UI update
+        _ = String(format: "Snoozing for %d minutes", snoozeDuration)
+    }
+    
+    private func simulateKeyboardShortcut() {
+        // Simulate shortcut detection
+        let modifiers: UInt = 0x00180000 // Cmd + Shift
+        let keyCode: UInt16 = 35 // P key
+        
+        let isCommandShift = (modifiers & 0x00100000) != 0 && (modifiers & 0x00080000) != 0
+        let action: String
+        
+        switch keyCode {
+        case 35: action = "togglePause"
+        case 1: action = "skip"
+        case 15: action = "reset"
+        default: action = "none"
+        }
+        
+        _ = (isCommandShift, action)
+    }
+    
+    private func simulateStatisticsPersistence() {
+        // Simulate encoding
+        let sessions: [[String: Any]] = (0..<50).map { i in
+            [
+                "id": UUID().uuidString,
+                "startTime": Date().timeIntervalSince1970 - Double(i * 1500),
+                "endTime": Date().timeIntervalSince1970 - Double(i * 1500) + 1500,
+                "durationMinutes": 25,
+                "wasCompleted": true
+            ]
+        }
+        
+        // Simulate JSON encoding
+        if let data = try? JSONSerialization.data(withJSONObject: sessions) {
+            // Simulate decoding
+            _ = try? JSONSerialization.jsonObject(with: data)
+        }
     }
 }
 
@@ -388,4 +681,3 @@ struct PerformanceReport {
         """
     }
 }
-
