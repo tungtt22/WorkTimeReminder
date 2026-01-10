@@ -411,7 +411,8 @@ struct SettingsScreenView: View {
     // MARK: - Shortcuts Info
     private var shortcutsInfo: some View {
         settingSection {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(spacing: 10) {
+                // Header
                 HStack {
                     Image(systemName: "keyboard")
                         .foregroundColor(accentColor)
@@ -420,35 +421,57 @@ struct SettingsScreenView: View {
                     Spacer()
                 }
                 
-                VStack(spacing: 6) {
-                    shortcutRow(keys: "⌘⇧P", action: l10n.pauseResume)
-                    shortcutRow(keys: "⌘⇧S", action: l10n.skipReminder)
-                    shortcutRow(keys: "⌘⇧R", action: l10n.resetTimer)
+                Divider().opacity(0.3)
+                
+                // Shortcuts grid
+                VStack(spacing: 8) {
+                    shortcutRow(keys: ["⌘", "⇧", "P"], action: l10n.pauseResume, icon: "pause.circle")
+                    shortcutRow(keys: ["⌘", "⇧", "S"], action: l10n.skipReminder, icon: "forward.end")
+                    shortcutRow(keys: ["⌘", "⇧", "R"], action: l10n.resetTimer, icon: "arrow.counterclockwise")
                 }
             }
-            .frame(maxWidth: .infinity)
         }
     }
     
-    private func shortcutRow(keys: String, action: String) -> some View {
-        HStack {
-            Text(keys)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundColor(accentColor)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(accentColor.opacity(0.1))
-                )
-                .frame(width: 60)
-            
-            Text(action)
+    private func shortcutRow(keys: [String], action: String, icon: String) -> some View {
+        HStack(spacing: 8) {
+            // Action icon
+            Image(systemName: icon)
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
+                .frame(width: 16)
+            
+            // Action name
+            Text(action)
+                .font(.system(size: 11))
+                .foregroundColor(.primary)
             
             Spacer()
+            
+            // Key caps
+            HStack(spacing: 3) {
+                ForEach(keys, id: \.self) { key in
+                    keyCap(key)
+                }
+            }
         }
+        .padding(.vertical, 4)
+    }
+    
+    private func keyCap(_ key: String) -> some View {
+        Text(key)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(.primary.opacity(0.8))
+            .frame(minWidth: 22, minHeight: 22)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color(NSColor.controlBackgroundColor))
+                    .shadow(color: .black.opacity(0.15), radius: 0.5, x: 0, y: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+            )
     }
     
     // MARK: - Version Label
