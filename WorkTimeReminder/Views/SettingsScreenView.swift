@@ -5,6 +5,7 @@ struct SettingsScreenView: View {
     @ObservedObject var reminderManager = ReminderManager.shared
     @ObservedObject var localization = LocalizationManager.shared
     @ObservedObject var schedule = WorkSchedule.shared
+    @ObservedObject var launchAtLogin = LaunchAtLoginManager.shared
     weak var appDelegate: AppDelegate?
     var onBackTapped: () -> Void
     var onScheduleTapped: (() -> Void)?
@@ -292,6 +293,50 @@ struct SettingsScreenView: View {
                 
                 Divider().opacity(0.3)
                 
+                // Launch at Login
+                VStack(spacing: 4) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(l10n.launchAtLoginTitle)
+                                .font(.system(size: 12))
+                            Text(l10n.launchAtLoginSubtitle)
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Toggle("", isOn: $launchAtLogin.isEnabled)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                            .tint(accentColor)
+                            .scaleEffect(0.85)
+                    }
+                    .padding(.top, 10)
+                    
+                    // Show approval notice if needed (macOS 13+)
+                    if #available(macOS 13.0, *) {
+                        if launchAtLogin.statusDescription == "Requires approval in System Settings" {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.orange)
+                                Text(l10n.requiresApproval)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.orange)
+                                Spacer()
+                                Button("Open") {
+                                    openLoginItemsSettings()
+                                }
+                                .font(.system(size: 10))
+                                .buttonStyle(.plain)
+                                .foregroundColor(accentColor)
+                            }
+                            .padding(.top, 4)
+                        }
+                    }
+                }
+                
+                Divider().opacity(0.3).padding(.vertical, 8)
+                
                 // Keep awake
                 VStack(spacing: 8) {
                     HStack {
@@ -309,7 +354,6 @@ struct SettingsScreenView: View {
                             .tint(accentColor)
                             .scaleEffect(0.85)
                     }
-                    .padding(.top, 10)
                 }
                 
                 Divider().opacity(0.3).padding(.vertical, 8)
@@ -347,6 +391,16 @@ struct SettingsScreenView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+    
+    // MARK: - Helper: Open Login Items Settings
+    private func openLoginItemsSettings() {
+        if #available(macOS 13.0, *) {
+            // Open System Settings > General > Login Items
+            if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") {
+                NSWorkspace.shared.open(url)
             }
         }
     }
@@ -476,7 +530,7 @@ struct SettingsScreenView: View {
     
     // MARK: - Version Label
     private var versionLabel: some View {
-        Text("v1.1.0")
+        Text("v1.3.0")
             .font(.system(size: 10))
             .foregroundColor(.secondary.opacity(0.6))
             .padding(.top, 4)

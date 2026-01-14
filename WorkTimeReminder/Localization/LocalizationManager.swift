@@ -354,5 +354,18 @@ struct L10n {
     var resetTimer: String {
         lang == .vietnamese ? "Reset timer" : "Reset timer"
     }
+    
+    // MARK: - Launch at Login
+    var launchAtLoginTitle: String {
+        lang == .vietnamese ? "Khởi động cùng máy" : "Launch at Login"
+    }
+    
+    var launchAtLoginSubtitle: String {
+        lang == .vietnamese ? "Tự động mở khi bật máy" : "Automatically start when you log in"
+    }
+    
+    var requiresApproval: String {
+        lang == .vietnamese ? "Cần cấp quyền trong Cài đặt Hệ thống" : "Requires approval in System Settings"
+    }
 }
 
