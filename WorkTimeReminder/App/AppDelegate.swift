@@ -19,6 +19,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var isPowerAssertionActive = false
     var globalEventMonitor: Any?
     var isSnoozing = false
+    var isPausedByScreenLock = false
+    var pausedTimerRemainingTime: TimeInterval = 0
     
     // MARK: - Optimization: Cached values
     private var cachedIcons: [String: NSImage] = [:]
@@ -51,6 +53,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         setupKeepAwakeObserver()
         setupKeyboardShortcuts()
         setupSnoozeObserver()
+        setupApplicationLifecycle()
         updatePowerAssertion()
     }
     
@@ -93,6 +96,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     func startTimer() {
         stopTimer()
         isSnoozing = false
+        isPausedByScreenLock = false
+        pausedTimerRemainingTime = 0
         statisticsManager.startSession()
         
         let interval = TimeInterval(reminderManager.intervalMinutes * 60)
@@ -101,6 +106,37 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
         reminderManager.nextReminderDate = Date().addingTimeInterval(interval)
         updatePowerAssertion()
+    }
+    
+    func pauseTimer() {
+        guard let nextDate = reminderManager.nextReminderDate, timer != nil else { return }
+        
+        // Calculate remaining time
+        pausedTimerRemainingTime = max(0, nextDate.timeIntervalSinceNow)
+        
+        // Stop the timer
+        timer?.invalidate()
+        timer = nil
+        reminderManager.nextReminderDate = nil
+        
+        isPausedByScreenLock = true
+        updateStatusBarDisplay()
+    }
+    
+    func resumeTimer() {
+        guard isPausedByScreenLock, pausedTimerRemainingTime > 0 else { return }
+        
+        // Resume with remaining time
+        timer = Timer.scheduledTimer(withTimeInterval: pausedTimerRemainingTime, repeats: false) { [weak self] _ in
+            self?.triggerReminder()
+            // After reminder, start new cycle
+            self?.startTimer()
+        }
+        
+        reminderManager.nextReminderDate = Date().addingTimeInterval(pausedTimerRemainingTime)
+        isPausedByScreenLock = false
+        pausedTimerRemainingTime = 0
+        updateStatusBarDisplay()
     }
     
     func stopTimer() {
@@ -153,6 +189,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 button.title = ""
                 lastIconState = .paused
                 lastDisplayedTime = ""
+            }
+            return
+        }
+        
+        // Handle paused by screen lock state
+        if isPausedByScreenLock {
+            let remaining = pausedTimerRemainingTime
+            let totalInterval = TimeInterval(reminderManager.intervalMinutes * 60)
+            let progressPercent = Int(max(0, min(100, (remaining / totalInterval) * 100)))
+            
+            let minutes = Int(remaining) / 60
+            let seconds = Int(remaining) % 60
+            let timeString = String(format: " %02d:%02d", minutes, seconds)
+            
+            // Show paused state with remaining time
+            if timeString != lastDisplayedTime || lastIconState != .paused {
+                button.image = getCachedIcon(state: .paused, progress: progressPercent)
+                button.title = timeString
+                button.attributedTitle = NSAttributedString(
+                    string: timeString,
+                    attributes: [.font: timeFont, .foregroundColor: NSColor.systemGray]
+                )
+                lastDisplayedTime = timeString
+                lastIconState = .paused
+                lastProgress = progressPercent
             }
             return
         }
@@ -496,6 +557,11 @@ extension AppDelegate {
         if screenLockTime == nil {
             screenLockTime = Date()
         }
+        
+        // Pause timer when screen locks (if enabled and timer is running)
+        if reminderManager.isEnabled && timer != nil && !isPausedByScreenLock {
+            pauseTimer()
+        }
     }
     
     @objc func handleScreenWake() {
@@ -506,12 +572,53 @@ extension AppDelegate {
         
         screenLockTime = nil
         
+        // Resume timer if it was paused by screen lock
+        if isPausedByScreenLock && reminderManager.isEnabled {
+            resumeTimer()
+            return
+        }
+        
+        // Auto reset logic (if away long enough)
         if reminderManager.autoResetOnScreenLock &&
            reminderManager.isEnabled &&
            awayDuration >= breakDurationSeconds {
             DispatchQueue.main.async { [weak self] in
                 self?.startTimer()
             }
+        }
+    }
+}
+
+// MARK: - Application Lifecycle
+extension AppDelegate {
+    
+    func setupApplicationLifecycle() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleApplicationWillResignActive),
+            name: NSApplication.willResignActiveNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleApplicationDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+    
+    @objc func handleApplicationWillResignActive() {
+        // Pause timer when app goes to background
+        if reminderManager.isEnabled && timer != nil && !isPausedByScreenLock {
+            pauseTimer()
+        }
+    }
+    
+    @objc func handleApplicationDidBecomeActive() {
+        // Resume timer when app becomes active again
+        if isPausedByScreenLock && reminderManager.isEnabled {
+            resumeTimer()
         }
     }
 }
